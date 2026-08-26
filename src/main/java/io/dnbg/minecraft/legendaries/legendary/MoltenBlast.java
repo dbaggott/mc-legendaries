@@ -1,6 +1,7 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
@@ -27,19 +28,26 @@ public final class MoltenBlast {
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
 	/**
-	 * The molten palette and its weights, in step.
-	 *
-	 * <p>13:13:13:1 puts lava at exactly one shell block in forty. That is a quarter of the rate it
-	 * started at — the first cut was 3:3:3:1, or one in ten — and the odd-looking 13 is what makes
-	 * the quarter exact rather than approximate.
-	 *
-	 * <p>Explicit weights rather than a flat array with one entry per weight: at these numbers that
-	 * array would be forty entries long, and a reader would have to count them to learn the odds.
+	 * What the shell turns into. Drawn uniformly — lava was in here and is not any more: it flows out
+	 * of the shell and keeps going, so a blast left a spreading mess rather than a crater.
 	 */
 	private static final Block[] MOLTEN = {
-		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK, Blocks.LAVA,
+		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK,
 	};
-	private static final int[] MOLTEN_WEIGHTS = {13, 13, 13, 1};
+
+	/**
+	 * The share of blocks the blast passes over untouched, in both passes.
+	 *
+	 * <p>Without it the crater is a geometrically perfect sphere with a uniform lining, which reads
+	 * as a cut rather than a blast. Sparing one block in five leaves original stone and ore standing
+	 * in the hole and breaks up the lining, so what the ground was made of is still visible in what
+	 * is left of it.
+	 */
+	private static final float SPARE_CHANCE = 0.2f;
+
+	/** Explosion puffs across the crater, and flames clinging to the molten shell. */
+	private static final int EXPLOSION_PUFFS = 40;
+	private static final int FLAMES_PER_SHELL_BLOCK = 2;
 
 	private MoltenBlast() {
 	}
@@ -48,13 +56,16 @@ public final class MoltenBlast {
 	public static void fire(ServerLevel level, Player player) {
 		BlockPos centre = player.blockPosition();
 		RandomSource random = level.getRandom();
+		// Particles go out before the blocks change, so the burst reads as the cause of the crater
+		// rather than an afterthought once the ground has already gone.
+		announce(level, centre);
 
 		// Pass one: erase the crater. No drops — even a radius-4 sphere is a couple of hundred
 		// blocks, and dropping them would bury the player in item entities and cost the server more
 		// than the blast itself.
 		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-BLAST_RADIUS, -BLAST_RADIUS, -BLAST_RADIUS),
 				centre.offset(BLAST_RADIUS, BLAST_RADIUS, BLAST_RADIUS))) {
-			if (!within(centre, pos, BLAST_RADIUS) || !destructible(level, pos)) {
+			if (!within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || spared(random)) {
 				continue;
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), BLOCK_UPDATE);
@@ -64,28 +75,42 @@ public final class MoltenBlast {
 		// touch it — so the crater gets a molten lining rather than the whole neighbourhood changing.
 		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-SHELL_RADIUS, -SHELL_RADIUS, -SHELL_RADIUS),
 				centre.offset(SHELL_RADIUS, SHELL_RADIUS, SHELL_RADIUS))) {
-			if (within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || !bordersCrater(centre, pos)) {
+			if (within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || !bordersCrater(centre, pos)
+					|| spared(random)) {
 				continue;
 			}
-			level.setBlock(pos, molten(random).defaultBlockState(), BLOCK_UPDATE);
+			level.setBlock(pos, MOLTEN[random.nextInt(MOLTEN.length)].defaultBlockState(), BLOCK_UPDATE);
+			// Flames on the face that looks into the crater, so the lining reads as freshly molten.
+			level.sendParticles(ParticleTypes.FLAME, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
+					FLAMES_PER_SHELL_BLOCK, 0.3, 0.3, 0.3, 0.01);
 		}
 	}
 
-	/** A weighted draw from the palette. */
-	private static Block molten(RandomSource random) {
-		int total = 0;
-		for (int weight : MOLTEN_WEIGHTS) {
-			total += weight;
-		}
-		int roll = random.nextInt(total);
-		for (int i = 0; i < MOLTEN.length; i++) {
-			roll -= MOLTEN_WEIGHTS[i];
-			if (roll < 0) {
-				return MOLTEN[i];
-			}
-		}
-		// Unreachable: roll is bounded by the same total the loop subtracts.
-		return MOLTEN[0];
+	/**
+	 * The visible burst.
+	 *
+	 * <p>{@code sendParticles} is a server-to-client packet, so this reaches a vanilla client with
+	 * nothing installed — which is the property the whole mod is built around. A blast that only
+	 * modded clients could see would be worse than none.
+	 *
+	 * <p>{@code EXPLOSION_EMITTER} is the single large bloom TNT uses; the scattered
+	 * {@code EXPLOSION} puffs are spread across the crater's width so the burst fills the volume the
+	 * blast is about to clear rather than sitting at one point.
+	 */
+	private static void announce(ServerLevel level, BlockPos centre) {
+		double x = centre.getX() + 0.5;
+		double y = centre.getY() + 0.5;
+		double z = centre.getZ() + 0.5;
+		level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
+		level.sendParticles(ParticleTypes.EXPLOSION, x, y, z, EXPLOSION_PUFFS,
+				BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, 0.0);
+		level.sendParticles(ParticleTypes.FLAME, x, y, z, EXPLOSION_PUFFS * 2,
+				BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, 0.05);
+	}
+
+	/** Whether this block is one of the lucky ones the blast leaves standing. */
+	private static boolean spared(RandomSource random) {
+		return random.nextFloat() < SPARE_CHANCE;
 	}
 
 	private static boolean within(BlockPos centre, BlockPos pos, int radius) {

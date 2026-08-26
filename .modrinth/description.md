@@ -18,8 +18,9 @@ It is unbreakable.
 ### Molten Blast
 
 **Sneak and right-click** to erase every block within four of you — all directions, including
-straight down — and turn the shell left behind into molten rock: magma, netherrack, coal or lava,
-weighted 13 / 13 / 13 / 1, so one shell block in forty is lava. Bedrock and anything else
+straight down — and turn the shell left behind into molten rock: magma, netherrack or coal, chosen
+evenly between them, with an explosion burst and flames. **One block in five is spared**, in both the
+crater and its lining, so original stone and ore stay standing in the hole. Bedrock and anything else
 vanilla marks unbreakable survives, so a blast cannot hole the world floor or the Nether roof.
 Nothing drops. Sixty second cooldown.
 
