@@ -15,6 +15,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -36,7 +37,8 @@ public final class Pedestal {
 	/** Scoreboard tag identifying our entities, so a player's own displays are never touched. */
 	public static final String TAG = "legendaries_pedestal";
 
-	private static final double PLINTH_SCALE_Y = 0.5;
+	/** How far above the plinth's block the spear floats. The plinth renders at full block size. */
+	private static final double SPEAR_HOVER = 1.25;
 	private static final float INTERACTION_SIZE = 1.5f;
 	private static final double SEARCH_RADIUS = 3.0;
 
@@ -109,7 +111,7 @@ public final class Pedestal {
 
 		Display.ItemDisplay shown = Pedestal.<Display.ItemDisplay>type("item_display").create(level, EntitySpawnReason.COMMAND);
 		if (shown != null) {
-			shown.snapTo(pos.getX() + 0.5, pos.getY() + 1.0 + PLINTH_SCALE_Y, pos.getZ() + 0.5, 0.0f, 0.0f);
+			shown.snapTo(pos.getX() + 0.5, pos.getY() + SPEAR_HOVER, pos.getZ() + 0.5, 0.0f, 0.0f);
 			shown.getSlot(0).set(spear.copy());
 			shown.addTag(TAG);
 			level.addFreshEntity(shown);
@@ -149,6 +151,15 @@ public final class Pedestal {
 				}
 			}
 		}
+		if (held.isEmpty()) {
+			// Nothing was recovered, which normally means the display's chunk has not loaded its
+			// entities yet rather than that the pedestal is empty. Leave the state exactly as it
+			// is: saying the spear has left while it is still standing out there would strand the
+			// real one, and the next load would see an entity that no longer belongs anywhere and
+			// destroy it. Answering "not now" is recoverable; answering "gone" is not.
+			Legendaries.LOGGER.warn("Could not read the spear off its pedestal at {} — leaving it there", pos);
+			return ItemStack.EMPTY;
+		}
 		clearEntities(level, pos);
 		state.setSpearOnPedestal(false);
 		return held;
@@ -174,6 +185,12 @@ public final class Pedestal {
 	 */
 	public static void discardStaleOnLoad(Entity entity, ServerLevel level) {
 		if (!entity.entityTags().contains(TAG)) {
+			return;
+		}
+		if (level.dimension() != Level.OVERWORLD) {
+			// A pedestal is only ever built in the overworld, so anything wearing this tag in
+			// another dimension was not put there by us. Judging it would mean deleting somebody
+			// else's entity on the strength of a name collision.
 			return;
 		}
 		MinecraftServer server = level.getServer();

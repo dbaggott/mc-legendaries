@@ -8,6 +8,7 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -43,14 +44,34 @@ public final class SpearCommand {
 
 	private static int move(CommandSourceStack source, BlockPos target) {
 		MinecraftServer server = source.getServer();
+		ServerLevel home = SpearState.home(server);
+		if (source.getLevel() != home) {
+			// The pedestal is always built in the overworld, so a position read from anywhere else is
+			// a set of coordinates from the wrong map — `here` in the Nether would site it eight times
+			// too far in, and `at` validates loadedness against the caller's level rather than this one.
+			source.sendFailure(Component.literal("The pedestal lives in the overworld. Run this from there."));
+			return 0;
+		}
+
 		SpearState state = SpearState.get(server);
 		BlockPos previous = state.pedestalPos();
 
 		// Take from the OLD site before repointing the state, then place at the new one. Doing it in
 		// this order is what stops a move from stranding the spear at a position nothing points at.
-		ItemStack carried = state.spearOnPedestal() ? Pedestal.take(server) : ItemStack.EMPTY;
+		ItemStack carried = ItemStack.EMPTY;
+		if (state.spearOnPedestal()) {
+			carried = Pedestal.take(server);
+			if (carried.isEmpty()) {
+				// take() refused rather than handing over an empty pedestal, so the spear is still
+				// standing at the old site and the state still says so. Moving now would repoint the
+				// state away from a real spear and the next chunk load would destroy it.
+				source.sendFailure(Component.literal(
+						"The spear's pedestal has not loaded yet. Go and look at it, then try again."));
+				return 0;
+			}
+		}
 		if (previous != null) {
-			Pedestal.clearEntities(SpearState.home(server), previous);
+			Pedestal.clearEntities(home, previous);
 		}
 
 		state.setPedestalPos(target);

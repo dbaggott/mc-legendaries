@@ -47,9 +47,11 @@ until it despawns puts it back on its **pedestal**: a non-collidable display
 entity that appears at world spawn the first time it is needed, and can be
 moved afterwards. Right-click the pedestal to take the spear back.
 
-**Spears elsewhere.** No spear drops from any loot table any more. Mobs still
-spawn with spears and fight with them — the vanilla spear AI is untouched — but
-they never drop one.
+**Spears elsewhere.** No spear drops from any loot table any more, and no mob
+drops the one it was holding — mob equipment drops bypass loot tables entirely,
+so that took its own hook. Mobs still spawn with spears and fight with them; the
+vanilla spear AI is untouched. A mob will not pick the legendary spear up off
+the ground.
 
 ## Admin
 

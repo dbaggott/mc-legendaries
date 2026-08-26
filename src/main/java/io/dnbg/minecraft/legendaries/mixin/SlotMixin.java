@@ -7,7 +7,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ResultSlot;
-import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -42,7 +42,10 @@ public abstract class SlotMixin {
 		// A crafting grid and its result are the player's own working space, not storage — the
 		// spear has to be able to come OUT of a result slot, and quick-move has to be able to put
 		// it back somewhere sane.
-		if (container instanceof Inventory || container instanceof CraftingContainer
+		// TransientCraftingContainer, not the CraftingContainer interface: a crafter block also
+		// implements it, and a crafter is redstone-facing storage — exactly what this rule and the
+		// hopper mixin exist to keep the spear out of.
+		if (container instanceof Inventory || container instanceof TransientCraftingContainer
 				|| container instanceof ResultContainer) {
 			return;
 		}
