@@ -213,8 +213,8 @@ public final class LegendaryCommand {
 		LegendaryState.get(source.getServer()).setSetting(legendary, setting, value);
 		source.sendSuccess(() -> Component.literal(legendary.displayName() + " " + setting.commandName()
 				+ " set to " + value + " " + setting.unit()), true);
-		// One setting changed. Returning `value` would make `config set mace cooldown 0` report a
-		// zero result out of a call that succeeded, which is what `execute store result` reads.
+		// One setting changed — a count, in the same currency as every other command here, because
+		// this is what `execute store result` reads.
 		return 1;
 	}
 

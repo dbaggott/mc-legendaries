@@ -72,10 +72,8 @@ public enum Legendary {
 	/**
 	 * Whether this legendary has an ability whose cooldown and radius mean anything.
 	 *
-	 * <p>A property of the entry rather than a test against a particular constant. Written as
-	 * {@code this == MACE} it would be the one place a third legendary with an ability had to be
-	 * remembered, with no compiler error if it were not — the symptom being {@code config get}
-	 * insisting something plainly powerful has nothing to configure.
+	 * <p>A property of the entry rather than a test against a particular constant, so a legendary
+	 * that gains an ability declares it in one place with everything else about itself.
 	 */
 	public boolean hasAbility() {
 		return hasAbility;
