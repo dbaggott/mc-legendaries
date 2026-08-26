@@ -1,0 +1,73 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+	// Loom adds Mojang + Fabric repos automatically. Add others here only
+	// when depending on mods hosted elsewhere.
+}
+
+// No splitEnvironmentSourceSets(): this mod is common — items, recipes, loot
+// and world state all run server-side, and it loads on a dedicated server with
+// no client present. Add the split (and a `mods` block naming both source
+// sets) if client-only rendering ever arrives.
+
+dependencies {
+	// Versions live in gradle.properties so they're easy to bump in one place.
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	// Expands ${version} inside fabric.mod.json so we don't have to keep the
+	// mod metadata's version field in sync with gradle.properties by hand.
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName" }
+	}
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		// Publishing targets (e.g. GitHub Packages, internal Maven) go here
+		// when we have somewhere to publish to. CI uploads the jar as a
+		// build artifact in the meantime.
+	}
+}
+
+// Modrinth/GitHub release publishing is deliberately absent: the
+// mod-publish-plugin's `projectId` is Modrinth's immutable handle, which only
+// exists once the project has been created there. It arrives with the first
+// release, alongside .modrinth/ and a release workflow.
