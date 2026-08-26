@@ -15,5 +15,13 @@
   ],
 
   "client_side": "optional",
-  "server_side": "required"
+  "server_side": "required",
+
+  "donation_urls": [
+    {
+      "id": "ko-fi",
+      "platform": "Ko-fi",
+      "url": "https://ko-fi.com/dnbg000"
+    }
+  ]
 }
