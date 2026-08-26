@@ -1,8 +1,8 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.ClaimTracked;
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
-import io.dnbg.minecraft.legendaries.spear.Pedestal;
+import io.dnbg.minecraft.legendaries.legendary.ClaimTracked;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
+import io.dnbg.minecraft.legendaries.legendary.Pedestal;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.SimpleContainer;
@@ -18,17 +18,17 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * The loss backstop: the spear cannot be destroyed out of the world.
+ * The loss backstop: a legendary cannot be destroyed out of the world.
  *
  * <p>{@code setRemoved} is the single funnel every removal passes through, which is why the hook
  * is here rather than on the individual causes — despawning after five minutes on the ground,
  * falling into the void, being blown up, and {@code /kill} all arrive at the same place. It covers
- * two carriers: an item entity lying on the ground, and a mob that picked the spear up despite the
+ * two carriers: an item entity lying on the ground, and a mob that picked a legendary up despite the
  * refusals in {@code MobMixin} and {@code FoxMixin}.
  *
  * <p>What is deliberately NOT caught:
  * <ul>
- *   <li>A pickup, flagged by {@link ItemEntityMixin} — otherwise walking over the spear would
+ *   <li>A pickup, flagged by {@link ItemEntityMixin} — otherwise walking over one would
  *       send it home.
  *   <li>{@code UNLOADED_TO_CHUNK} and {@code CHANGED_DIMENSION}, which are bookkeeping. An item in
  *       an unloaded chunk is not lost, it is asleep.
@@ -61,7 +61,7 @@ public abstract class EntityMixin {
 	@Unique
 	private static void legendaries$returnFromGround(MinecraftServer server, ItemEntity itemEntity) {
 		ItemStack stack = itemEntity.getItem();
-		if (!NetheriteSpear.is(stack)) {
+		if (!Legendary.isAny(stack)) {
 			return;
 		}
 		if (itemEntity instanceof ClaimTracked tracked && tracked.legendaries$wasClaimed()) {
@@ -87,7 +87,7 @@ public abstract class EntityMixin {
 	private static void legendaries$returnFromMob(MinecraftServer server, Mob mob) {
 		for (EquipmentSlot slot : EquipmentSlot.VALUES) {
 			ItemStack held = mob.getItemBySlot(slot);
-			if (NetheriteSpear.is(held)) {
+			if (Legendary.isAny(held)) {
 				mob.setItemSlot(slot, ItemStack.EMPTY);
 				Pedestal.place(server, held);
 				return;
@@ -99,7 +99,7 @@ public abstract class EntityMixin {
 		SimpleContainer inventory = carrier.getInventory();
 		for (int i = 0; i < inventory.getContainerSize(); i++) {
 			ItemStack held = inventory.getItem(i);
-			if (NetheriteSpear.is(held)) {
+			if (Legendary.isAny(held)) {
 				inventory.setItem(i, ItemStack.EMPTY);
 				Pedestal.place(server, held);
 				return;

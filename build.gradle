@@ -17,6 +17,29 @@ repositories {
 // no client present. Add the split (and a `mods` block naming both source
 // sets) if client-only rendering ever arrives.
 
+loom {
+	// Where the dev client and server keep their world, options and mods.
+	//
+	// Defaults to `run/` inside whichever directory Gradle was invoked from, which means a
+	// worktree gets its own empty world and its own keybinds — fine for a throwaway test, useless
+	// for playing the mod. Setting `legendaries_run_dir` to an absolute path in
+	// ~/.gradle/gradle.properties points every worktree on that machine at one shared directory.
+	//
+	// A user-level property rather than a committed value on purpose: the path is per-machine, and
+	// a clone that sets nothing still gets the ordinary `run/`.
+	//
+	// Two run configurations cannot share a directory at the same time — a client and a server both
+	// launched against it will contend for the same world lock.
+	runs.configureEach {
+		String shared = providers.gradleProperty("legendaries_run_dir").getOrNull()
+		// Blank counts as unset: a property line left empty in gradle.properties should fall back
+		// to the default rather than resolve the run directory to nothing.
+		if (shared != null && !shared.isBlank()) {
+			runDir = shared
+		}
+	}
+}
+
 dependencies {
 	// Versions live in gradle.properties so they're easy to bump in one place.
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"

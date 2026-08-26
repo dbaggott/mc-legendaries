@@ -1,8 +1,8 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
-import io.dnbg.minecraft.legendaries.spear.SpearRules;
-import io.dnbg.minecraft.legendaries.spear.SpearState;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryRules;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryState;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -17,13 +17,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Refuses the spear into any slot that is not the player's own.
+ * Refuses a legendary into any slot that is not the player's own.
  *
  * <p>This is the whole of the container rule for anything a player does through a screen. Every
  * vanilla storage screen — chest, trapped chest, barrel, ender chest, shulker box, hopper, dropper,
  * dispenser — builds plain {@link Slot}s over a non-player container, so one check covers them all.
  * The furnace family and the chiseled bookshelf override {@code mayPlace} with their own rules and
- * never reach this, but those already refuse a spear on their own terms.
+ * never reach this, but those already refuse a legendary on their own terms.
  *
  * <p>The refusal is silent here by design: {@code mayPlace} is called for hover and layout, many
  * times a second, so a message would fire constantly rather than on an actual attempt.
@@ -34,17 +34,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Slot.class)
 public abstract class SlotMixin {
 	@Inject(method = "mayPlace", at = @At("HEAD"), cancellable = true)
-	private void legendaries$refuseSpearOutsidePlayerInventory(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-		if (!NetheriteSpear.is(stack)) {
+	private void legendaries$refuseOutsidePlayerInventory(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+		if (!Legendary.isAny(stack)) {
 			return;
 		}
 		Object container = ((Slot) (Object) this).container;
 		// A crafting grid and its result are the player's own working space, not storage — the
-		// spear has to be able to come OUT of a result slot, and quick-move has to be able to put
+		// legendary has to be able to come OUT of a result slot, and quick-move has to be able to put
 		// it back somewhere sane.
 		// TransientCraftingContainer, not the CraftingContainer interface: a crafter block also
 		// implements it, and a crafter is redstone-facing storage — exactly what this rule and the
-		// hopper mixin exist to keep the spear out of.
+		// hopper mixin exist to keep legendaries out of.
 		if (container instanceof Inventory || container instanceof TransientCraftingContainer
 				|| container instanceof ResultContainer) {
 			return;
@@ -53,7 +53,7 @@ public abstract class SlotMixin {
 	}
 
 	/**
-	 * Refuses a second spear.
+	 * Refuses a second copy of a legendary.
 	 *
 	 * <p>The gate is on taking the result rather than on the recipe matching: the recipe is plain
 	 * data-driven {@code crafting_shaped} JSON, which cannot consult world state, and giving it a
@@ -62,19 +62,20 @@ public abstract class SlotMixin {
 	 * refused, which is why the refusal says why.
 	 */
 	@Inject(method = "mayPickup", at = @At("HEAD"), cancellable = true)
-	private void legendaries$refuseSecondSpear(Player player, CallbackInfoReturnable<Boolean> cir) {
+	private void legendaries$refuseSecondCopy(Player player, CallbackInfoReturnable<Boolean> cir) {
 		Slot self = (Slot) (Object) this;
 		if (!(self instanceof ResultSlot) || player.level().isClientSide()) {
 			return;
 		}
-		if (!NetheriteSpear.is(self.getItem())) {
+		Legendary legendary = Legendary.of(self.getItem()).orElse(null);
+		if (legendary == null) {
 			return;
 		}
 		MinecraftServer server = player.level().getServer();
-		if (server == null || !SpearState.get(server).crafted()) {
+		if (server == null || !LegendaryState.get(server).crafted(legendary)) {
 			return;
 		}
-		SpearRules.refuse(player, "The Netherite Spear has already been crafted.");
+		LegendaryRules.refuse(player, legendary.displayName() + " has already been crafted.");
 		cir.setReturnValue(false);
 	}
 }

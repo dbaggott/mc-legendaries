@@ -1,9 +1,10 @@
-package io.dnbg.minecraft.legendaries.spear;
+package io.dnbg.minecraft.legendaries.legendary;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.minecraft.network.chat.Component;
@@ -15,7 +16,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -29,29 +29,29 @@ import net.minecraft.world.level.block.ShelfBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * The rules that follow the spear around: what it grants, what it refuses, and what no longer
+ * The rules that follow a legendary around: what it grants, what it refuses, and what no longer
  * drops now that it exists.
  */
-public final class SpearRules {
+public final class LegendaryRules {
 	/**
 	 * Speed II, refreshed on a cadence shorter than its own duration so it never visibly flickers
 	 * and never outlives the spear leaving the inventory by more than one refresh.
 	 */
 	private static final int EFFECT_INTERVAL_TICKS = 20;
 	private static final int EFFECT_DURATION_TICKS = 40;
-	private static final int SPEED_II = 1;
 
 	/** Reset per session; the pedestal is raised once the site's chunk is genuinely loaded. */
 	private static boolean pedestalRaised;
 
-	private SpearRules() {
+	private LegendaryRules() {
 	}
 
 	public static void register() {
 		stripSpearDrops();
 		raisePedestalOnce();
 		ServerEntityEvents.ENTITY_LOAD.register(Pedestal::discardStaleOnLoad);
-		grantSpeedWhileCarried();
+		grantCarriedEffects();
+		wireMoltenBlast();
 		wireEntityInteractions();
 		refuseDirectPlacement();
 	}
@@ -69,7 +69,7 @@ public final class SpearRules {
 				// Unmarked spears only. A mob that got hold of the legendary despite the refusals
 				// can reach a drop, and stripping it here would have this mod destroying the one
 				// item everything else in it exists to keep.
-				stacks.removeIf(stack -> stack.is(ItemTags.SPEARS) && !NetheriteSpear.is(stack)));
+				stacks.removeIf(stack -> stack.is(ItemTags.SPEARS) && !Legendary.isAny(stack)));
 	}
 
 	/**
@@ -86,8 +86,8 @@ public final class SpearRules {
 			if (pedestalRaised) {
 				return;
 			}
-			ServerLevel home = SpearState.home(server);
-			BlockPos site = Pedestal.position(server, SpearState.get(server));
+			ServerLevel home = LegendaryState.home(server);
+			BlockPos site = Pedestal.position(server, LegendaryState.get(server));
 			// areEntitiesLoaded, not isLoaded: the latter answers "is the chunk here", and the
 			// entity index arrives separately behind a future. In the gap between the two, a
 			// pedestal that is standing reads as absent, and ensure() would raise a second one
@@ -101,15 +101,19 @@ public final class SpearRules {
 		});
 	}
 
-	private static void grantSpeedWhileCarried() {
+	private static void grantCarriedEffects() {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			if (server.getTickCount() % EFFECT_INTERVAL_TICKS != 0) {
 				return;
 			}
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-				if (carrying(player)) {
-					player.addEffect(new MobEffectInstance(
-							MobEffects.SPEED, EFFECT_DURATION_TICKS, SPEED_II, true, false, true));
+				for (Legendary legendary : Legendary.values()) {
+					legendary.carriedEffect().ifPresent(effect -> {
+						if (carrying(player, legendary)) {
+							player.addEffect(new MobEffectInstance(effect, EFFECT_DURATION_TICKS,
+									legendary.carriedAmplifier(), true, false, true));
+						}
+					});
 				}
 			}
 		});
@@ -121,13 +125,13 @@ public final class SpearRules {
 	 * <p>Only the player's own slots count. A spear nested inside a shulker box in the inventory
 	 * does not — though nothing can put it there, since the container rules refuse it.
 	 */
-	public static boolean carrying(Player player) {
+	public static boolean carrying(Player player, Legendary legendary) {
 		for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
-			if (NetheriteSpear.is(stack)) {
+			if (legendary.is(stack)) {
 				return true;
 			}
 		}
-		return NetheriteSpear.is(player.getOffhandItem()) || NetheriteSpear.is(player.getMainHandItem());
+		return legendary.is(player.getOffhandItem()) || legendary.is(player.getMainHandItem());
 	}
 
 	/**
@@ -145,10 +149,10 @@ public final class SpearRules {
 			if (!(entity instanceof ItemFrame) && !(entity instanceof ArmorStand)) {
 				return InteractionResult.PASS;
 			}
-			if (!NetheriteSpear.is(player.getItemInHand(hand))) {
+			if (!Legendary.isAny(player.getItemInHand(hand))) {
 				return InteractionResult.PASS;
 			}
-			refuse(player, "The Netherite Spear will not be left on display.");
+			refuse(player, legendaryName(player.getItemInHand(hand)) + " will not be left on display.");
 			return InteractionResult.FAIL;
 		});
 	}
@@ -171,16 +175,16 @@ public final class SpearRules {
 			Block block = state.getBlock();
 			boolean refuse;
 			if (block instanceof ShelfBlock) {
-				refuse = shelfWouldTakeTheSpear(player, hand, state);
+				refuse = shelfWouldTakeALegendary(player, hand, state);
 			} else if (block instanceof DecoratedPotBlock) {
-				refuse = NetheriteSpear.is(player.getItemInHand(hand));
+				refuse = Legendary.isAny(player.getItemInHand(hand));
 			} else {
 				return InteractionResult.PASS;
 			}
 			if (!refuse) {
 				return InteractionResult.PASS;
 			}
-			refuse(player, "The Netherite Spear will not be set down there.");
+			refuse(player, "That will not be set down there.");
 			return InteractionResult.FAIL;
 		});
 	}
@@ -197,8 +201,8 @@ public final class SpearRules {
 	 * <p>The two cases are kept apart rather than collapsed into "refuse whenever the spear is in
 	 * the hotbar", because that would stop a player using any shelf at all while carrying it.
 	 */
-	private static boolean shelfWouldTakeTheSpear(Player player, InteractionHand hand, BlockState state) {
-		if (NetheriteSpear.is(player.getItemInHand(hand))) {
+	private static boolean shelfWouldTakeALegendary(Player player, InteractionHand hand, BlockState state) {
+		if (Legendary.isAny(player.getItemInHand(hand))) {
 			return true;
 		}
 		if (!state.getValue(ShelfBlock.POWERED)) {
@@ -206,7 +210,7 @@ public final class SpearRules {
 		}
 		Inventory inventory = player.getInventory();
 		for (int slot = 0; slot < Inventory.SELECTION_SIZE; slot++) {
-			if (NetheriteSpear.is(inventory.getItem(slot))) {
+			if (Legendary.isAny(inventory.getItem(slot))) {
 				return true;
 			}
 		}
@@ -221,14 +225,45 @@ public final class SpearRules {
 		if (server == null) {
 			return InteractionResult.PASS;
 		}
-		ItemStack spear = Pedestal.take(server);
-		if (spear.isEmpty()) {
+		// One per click, chosen at random from whatever is standing there.
+		ItemStack claimed = Pedestal.takeOne(server);
+		if (claimed.isEmpty()) {
 			return InteractionResult.PASS;
 		}
-		if (!serverPlayer.getInventory().add(spear)) {
-			serverPlayer.drop(spear, false);
+		if (!serverPlayer.getInventory().add(claimed)) {
+			serverPlayer.drop(claimed, false);
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	/**
+	 * Sneak + right-click with the Mace fires a Molten Blast.
+	 *
+	 * <p>Sneak-gated rather than a plain right-click because the blast deletes the ground under the
+	 * player's feet — an accidental trigger is expensive in a way a mis-swing is not. A keybind would read better still, but only for players who
+	 * installed the mod; this works from a vanilla client.
+	 */
+	private static void wireMoltenBlast() {
+		UseItemCallback.EVENT.register((player, level, hand) -> {
+			ItemStack held = player.getItemInHand(hand);
+			if (!Legendary.MACE.is(held) || !player.isShiftKeyDown()) {
+				return InteractionResult.PASS;
+			}
+			if (player.getCooldowns().isOnCooldown(held)) {
+				return InteractionResult.FAIL;
+			}
+			if (level instanceof ServerLevel serverLevel) {
+				MoltenBlast.fire(serverLevel, player);
+				player.getCooldowns().addCooldown(held, MoltenBlast.cooldownTicks(serverLevel.getServer()));
+			}
+			// SUCCESS on both sides so the client plays the swing rather than waiting on the server.
+			return InteractionResult.SUCCESS;
+		});
+	}
+
+	/** How to name whatever legendary this stack is, for a message aimed at a player. */
+	private static String legendaryName(ItemStack stack) {
+		return Legendary.of(stack).map(Legendary::displayName).orElse("That");
 	}
 
 	/** Tells the player why, on the actionbar, where a refusal is read rather than scrolled past. */

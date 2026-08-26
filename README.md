@@ -7,7 +7,10 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own crafting recipes, their own rules, and no other way to
 obtain them.
 
-One legendary exists so far: the **Netherite Spear**.
+Two exist so far: the **Netherite Spear** and the **Mace**.
+
+Every legendary shares the same rules — one per world, refused by every container, and returned to
+a shared pedestal rather than ever being lost. What differs is how you get it and what it does.
 
 The mod is **common**, not client-only — every rule it adds is decided on the
 logical server, so it installs on a dedicated server and vanilla clients can
@@ -56,15 +59,66 @@ vanilla spear AI is untouched. Mobs are refused the legendary spear, and if one
 gets hold of it regardless it returns to the pedestal when that mob dies or
 despawns rather than leaving with it.
 
+## The Mace
+
+Crafted by the ordinary vanilla recipe — a heavy core over a breeze rod. The recipe's ingredients
+and pattern are untouched; only its result is the legendary, so there is one mace per world and no
+plain ones. It is unbreakable.
+
+### Molten Blast
+
+**Sneak and right-click** to erase every block within four of you — in all directions, including
+straight down — and turn the shell left behind into molten rock. It goes off with an explosion burst
+and flames.
+
+Everything inside the radius goes. What varies is the lining: each shell block draws from magma,
+netherrack, coal, or **left as it is** at weights 4 / 4 / 4 / 3 — so one shell block in five keeps
+whatever it was made of, and the crater's edge shows the ground it was cut from rather than a
+uniform coat.
+
+Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
+or the Nether roof. Nothing drops; a sphere that size is over two hundred blocks and would bury you in items. **60 second
+cooldown**, shown on the item.
+
+It is centred on you and it does not care that you are standing there. Expect to fall.
+
 ## Admin
 
 ```
-/legendaries pedestal where      # where it is, and whether the spear is on it
-/legendaries pedestal here       # move it to where you are standing
-/legendaries pedestal at <x y z> # move it to a specific block
+/legendaries pedestal where               # where it is, and what is standing on it
+/legendaries pedestal here                # move it to where you are standing
+/legendaries pedestal at <x y z>          # move it to a specific block
+
+/legendaries item give <players> <name>   # hand out a legendary
+/legendaries item delete <players> <name> # take every copy back
 ```
 
-Requires permission level 2. Moving an occupied pedestal carries the spear.
+```
+/legendaries config get <name>                # what its ability is tuned to
+/legendaries config set <name> <setting> <n>  # cooldown (seconds) or radius (blocks)
+```
+
+`<name>` is `netherite_spear` or `mace`, tab-completed; so is `<setting>`.
+
+**`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
+rebuild and a relaunch. Values persist with the world, `radius` is capped at 16 because cost grows
+with its cube, and a legendary with no ability says so rather than storing a number nothing reads.
+Changing `cooldown` does not clear one already counting down — set it to `0` and swing once for
+that.
+
+**`item give` ignores the one-per-world rule** — that is what it is for, whether you are recovering
+a legendary lost to something the backstop could not catch or testing a change. It does not mark the
+world as having crafted one, so the crafting route stays open: a given copy is a copy, not the craft.
+The item is built by assembling that legendary's own recipe, so it is identical to a crafted one.
+
+If a duplicate is lost while the original is already home, it drops beside the pedestal rather than
+onto it — there is one display slot per legendary, and deleting the extra would make the command a
+way to destroy what it just handed out.
+
+Requires permission level 2. Moving an occupied pedestal carries whatever is on it.
+
+Both legendaries share one pedestal, each in its own slot. Right-clicking takes one at random from
+whatever is standing there.
 
 ## Installing
 
@@ -119,6 +173,24 @@ mise install          # Temurin 25
 ./gradlew runClient   # dev client
 ./gradlew runServer   # dev dedicated server
 ```
+
+`runClient` compiles the current source itself, so `build` beforehand is redundant — reach for
+`build` when you want the jar.
+
+### Sharing one world across worktrees
+
+The dev run directory defaults to `run/` beside whatever you launched, so each worktree gets its own
+empty world and its own keybinds. To point every worktree on a machine at one directory, set an
+absolute path in **`~/.gradle/gradle.properties`** — a user-level file, so the path never reaches the
+repo:
+
+```
+legendaries_run_dir=/Users/you/mc-legendaries-run
+```
+
+A clone that sets nothing keeps the ordinary `run/`. Note that two run configurations cannot share
+the directory simultaneously: a client and a server both launched against it contend for the same
+world lock.
 
 ## Releasing
 

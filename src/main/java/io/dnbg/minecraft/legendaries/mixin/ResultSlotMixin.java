@@ -1,7 +1,7 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
-import io.dnbg.minecraft.legendaries.spear.SpearState;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryState;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ResultSlot;
@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Records the one craft.
  *
- * <p>Taking the spear out of a crafting result is the only moment it comes into existence, and the
+ * <p>Taking a legendary out of a crafting result is the only moment it comes into existence, and the
  * only moment it is safe to record — {@code assemble} runs speculatively every time the grid
  * changes, so marking the world there would burn the craft on a preview.
  *
@@ -24,16 +24,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ResultSlotMixin {
 	@Inject(method = "onTake", at = @At("HEAD"))
 	private void legendaries$recordTheOneCraft(Player player, ItemStack stack, CallbackInfo ci) {
-		if (player.level().isClientSide() || !NetheriteSpear.is(stack)) {
+		if (player.level().isClientSide()) {
+			return;
+		}
+		Legendary legendary = Legendary.of(stack).orElse(null);
+		if (legendary == null) {
 			return;
 		}
 		MinecraftServer server = player.level().getServer();
 		if (server == null) {
 			return;
 		}
-		SpearState state = SpearState.get(server);
-		if (!state.crafted()) {
-			state.markCrafted();
-		}
+		LegendaryState.get(server).markCrafted(legendary);
 	}
 }
