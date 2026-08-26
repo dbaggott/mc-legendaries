@@ -1,0 +1,173 @@
+name: sync-project
+
+# When anything in .modrinth/ changes on main, sync the Modrinth project's
+# fields to match. .modrinth/ is the single source of truth; the web UI
+# becomes a read-through of what's in the repo.
+#
+# What gets synced (all in one workflow run, separate steps for log clarity):
+#   1. Project metadata — description / body / URLs / license / categories
+#      / side support, from description.md + metadata.json.
+#   2. Icon — single PNG at .modrinth/icon.png, uploaded as-is.
+#   3. Gallery — manifest-driven from .modrinth/gallery.json. The gallery
+#      is rebuilt every run (delete-existing + upload-from-manifest) so
+#      that the on-Modrinth state always matches the manifest exactly.
+#      Files in .modrinth/gallery/ that aren't referenced from
+#      gallery.json are ignored (so stray screenshots are harmless).
+on:
+  push:
+    branches: [main]
+    paths: ['.modrinth/**']
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve project ID
+        id: project
+        run: |
+          set -euo pipefail
+          PROJECT_ID=$(grep '^modrinth_project_id=' gradle.properties | cut -d= -f2)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::modrinth_project_id is empty in gradle.properties"
+            exit 1
+          fi
+          echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Sync metadata (PATCH only fields that differ)
+        env:
+          MODRINTH_API_KEY: ${{ secrets.MODRINTH_API_KEY }}
+          PROJECT_ID: ${{ steps.project.outputs.id }}
+        run: |
+          set -euo pipefail
+          # JSON-encode the markdown body and splice it into metadata.json
+          # under the `body` key — that's the shape Modrinth's PATCH endpoint
+          # expects.
+          BODY_JSON=$(jq -Rs . < .modrinth/description.md)
+          DESIRED=$(jq --argjson body "$BODY_JSON" '. + { body: $body }' \
+                    .modrinth/metadata.json)
+
+          # Read the current server state so we can diff.
+          RAW_CURRENT=$(curl -sS --fail-with-body \
+            -H "Authorization: $MODRINTH_API_KEY" \
+            "https://api.modrinth.com/v2/project/$PROJECT_ID")
+
+          # Modrinth's GET returns `license` as an object ({id,name,url})
+          # while PATCH accepts `license_id` as a scalar. Reshape the GET
+          # response so its key matches the shape we're PATCHing with —
+          # otherwise `$cur["license_id"]` is always null, and the diff
+          # would never elide the license field even when it's unchanged
+          # (making the {}-skip branch unreachable in the truly-no-op case).
+          CURRENT=$(jq '. + { license_id: (.license.id // null) }' <<< "$RAW_CURRENT")
+
+          # Send only the fields that differ from the current server value.
+          # Modrinth 400s on some no-op PATCHes — notably a slug PATCH to
+          # the current slug returns
+          #   {"error":"invalid_input",
+          #    "description":"Invalid input: Slug collides with other
+          #                   project's id!"}
+          # even when the value is unchanged (their validator seems to
+          # check "slug matches any project's ID" without excluding self).
+          # Diff-then-PATCH sidesteps that and also makes the workflow
+          # genuinely idempotent — a re-run with no repo changes exits
+          # at the {}-skip branch below without touching the API.
+          PAYLOAD=$(jq -n --argjson cur "$CURRENT" --argjson des "$DESIRED" '
+            $des
+            | with_entries(select(.value != ($cur[.key])))
+          ')
+          if [ "$PAYLOAD" = "{}" ]; then
+            echo "no field differs from current state — skipping PATCH."
+            exit 0
+          fi
+          echo "fields to PATCH: $(echo "$PAYLOAD" | jq -r 'keys | join(", ")')"
+
+          # --fail-with-body: error exit on HTTP 4xx/5xx AND print Modrinth's
+          # response body so the actual error message shows in the log
+          # (vs `-f`, which would discard the body and leave a bare exit 22).
+          curl -sS --fail-with-body -X PATCH \
+            -H "Authorization: $MODRINTH_API_KEY" \
+            -H "Content-Type: application/json" \
+            "https://api.modrinth.com/v2/project/$PROJECT_ID" \
+            --data "$PAYLOAD"
+
+      - name: Sync icon (PATCH project icon)
+        if: hashFiles('.modrinth/icon.png') != ''
+        env:
+          MODRINTH_API_KEY: ${{ secrets.MODRINTH_API_KEY }}
+          PROJECT_ID: ${{ steps.project.outputs.id }}
+        run: |
+          set -euo pipefail
+          curl -sS --fail-with-body -X PATCH \
+            -H "Authorization: $MODRINTH_API_KEY" \
+            -H "Content-Type: image/png" \
+            --data-binary @.modrinth/icon.png \
+            "https://api.modrinth.com/v2/project/$PROJECT_ID/icon?ext=png"
+
+      - name: Sync gallery (rebuild from manifest)
+        if: hashFiles('.modrinth/gallery.json') != ''
+        env:
+          MODRINTH_API_KEY: ${{ secrets.MODRINTH_API_KEY }}
+          PROJECT_ID: ${{ steps.project.outputs.id }}
+        run: |
+          set -euo pipefail
+
+          # 1. Delete every existing gallery item. The on-Modrinth gallery
+          # is always rebuilt from the manifest, so it tracks the file
+          # exactly with no stale items left around.
+          EXISTING_URLS=$(curl -sS --fail-with-body \
+            -H "Authorization: $MODRINTH_API_KEY" \
+            "https://api.modrinth.com/v2/project/$PROJECT_ID" \
+            | jq -r '.gallery[]?.url')
+
+          if [ -n "$EXISTING_URLS" ]; then
+            while IFS= read -r url; do
+              [ -z "$url" ] && continue
+              ENCODED=$(jq -rn --arg u "$url" '$u | @uri')
+              curl -sS --fail-with-body -X DELETE \
+                -H "Authorization: $MODRINTH_API_KEY" \
+                "https://api.modrinth.com/v2/project/$PROJECT_ID/gallery?url=$ENCODED"
+            done <<< "$EXISTING_URLS"
+          fi
+
+          # 2. Upload each item from the manifest. Files in
+          # .modrinth/gallery/ that aren't in the manifest are ignored —
+          # the manifest is the source of truth, not the directory listing.
+          COUNT=$(jq 'length' .modrinth/gallery.json)
+          for i in $(seq 0 $((COUNT - 1))); do
+            ENTRY=$(jq ".[$i]" .modrinth/gallery.json)
+            FILE=$(jq -r '.file' <<< "$ENTRY")
+            TITLE=$(jq -r '.title // empty' <<< "$ENTRY")
+            DESC=$(jq -r '.description // empty' <<< "$ENTRY")
+            FEATURED=$(jq -r '.featured // false' <<< "$ENTRY")
+            ORDERING=$(jq -r '.ordering // 0' <<< "$ENTRY")
+
+            if [ ! -f ".modrinth/gallery/$FILE" ]; then
+              echo "::error::gallery.json references .modrinth/gallery/$FILE but file is missing"
+              exit 1
+            fi
+            EXT="${FILE##*.}"
+            # Map non-standard MIME aliases to their canonical form so a
+            # `.jpg` file still sends `Content-Type: image/jpeg`. The `ext`
+            # query param keeps the file extension as-is.
+            MIME_EXT="$EXT"
+            [ "$MIME_EXT" = "jpg" ] && MIME_EXT="jpeg"
+
+            QS="ext=$EXT&featured=$FEATURED&ordering=$ORDERING"
+            if [ -n "$TITLE" ]; then
+              QS="$QS&title=$(jq -rn --arg v "$TITLE" '$v | @uri')"
+            fi
+            if [ -n "$DESC" ]; then
+              QS="$QS&description=$(jq -rn --arg v "$DESC" '$v | @uri')"
+            fi
+
+            curl -sS --fail-with-body -X POST \
+              -H "Authorization: $MODRINTH_API_KEY" \
+              -H "Content-Type: image/$MIME_EXT" \
+              --data-binary "@.modrinth/gallery/$FILE" \
+              "https://api.modrinth.com/v2/project/$PROJECT_ID/gallery?$QS"
+            echo "uploaded gallery item: $FILE"
+          done

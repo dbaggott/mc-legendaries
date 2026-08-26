@@ -120,6 +120,26 @@ mise install          # Temurin 25
 ./gradlew runServer   # dev dedicated server
 ```
 
+## Releasing
+
+Published to [Modrinth](https://modrinth.com/mod/re-legendaries) and GitHub Releases from one
+workflow. To cut a release:
+
+1. Write `.modrinth/changelogs/<new-version>.md`.
+2. Bump `mod_version` in `gradle.properties` and merge to `main`.
+
+`.github/workflows/release.yml` fires on that bump, refuses if the version did not actually change
+or if the tag already exists, then builds and publishes. Forgetting step 1 fails the publish with a
+message naming the missing file, so every release has written notes by construction. The Actions tab
+also has a manual `Run workflow` for retries, which skips the gate.
+
+`.modrinth/` is the source of truth for the project page — description, metadata, icon and gallery.
+Changing anything under it on `main` syncs Modrinth to match, so the web UI is a read-through of the
+repo rather than somewhere state is edited. The icon and gallery steps skip when the files are
+absent, which they currently are.
+
+Both workflows need a `MODRINTH_API_KEY` repository secret.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
