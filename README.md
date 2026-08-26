@@ -36,9 +36,10 @@ Sharpness V, Fire Aspect II and Looting III** — the vanilla maximum of each �
 and grants **Speed II** while it is in your inventory or your hand.
 
 **Keeping it.** It cannot be put into any container: chests, barrels, ender
-chests, shulker boxes, item frames, armor stands. Hoppers will not take it
-either, so the rule cannot be routed around with redstone. Dropping it, dying
-with it and handing it to another player all work normally.
+chests, shulker boxes, crafters, bundles, shelves, decorated pots, item frames,
+armor stands. Hoppers will not take it either, so the rule cannot be routed
+around with redstone, and a crafter cannot make one. Dropping it, dying with it
+and handing it to another player all work normally.
 
 **Losing it.** You cannot. It is fire- and lava-immune already, because vanilla
 registers `netherite_spear` as fire-resistant. Anything that would genuinely
@@ -50,8 +51,9 @@ moved afterwards. Right-click the pedestal to take the spear back.
 **Spears elsewhere.** No spear drops from any loot table any more, and no mob
 drops the one it was holding — mob equipment drops bypass loot tables entirely,
 so that took its own hook. Mobs still spawn with spears and fight with them; the
-vanilla spear AI is untouched. A mob will not pick the legendary spear up off
-the ground.
+vanilla spear AI is untouched. Mobs are refused the legendary spear, and if one
+gets hold of it regardless it returns to the pedestal when that mob dies or
+despawns rather than leaving with it.
 
 ## Admin
 
