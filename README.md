@@ -67,12 +67,12 @@ plain ones. It is unbreakable.
 
 ### Molten Blast
 
-**Sneak and right-click** to erase every block within five of you — in all directions, including
+**Sneak and right-click** to erase every block within four of you — in all directions, including
 straight down — and turn the shell left behind into molten rock: magma, netherrack, coal or lava,
-weighted 3 / 3 / 3 / 1.
+weighted 4 / 4 / 4 / 1, so roughly one shell block in thirteen is lava.
 
 Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
-or the Nether roof. Nothing drops; a sphere that size would bury you in items. **60 second
+or the Nether roof. Nothing drops; a sphere that size is over two hundred blocks and would bury you in items. **60 second
 cooldown**, shown on the item.
 
 It is centred on you and it does not care that you are standing there. Expect to fall.

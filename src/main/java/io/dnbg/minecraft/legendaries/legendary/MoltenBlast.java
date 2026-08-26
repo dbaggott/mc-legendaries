@@ -20,21 +20,24 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class MoltenBlast {
 	public static final int COOLDOWN_TICKS = 60 * 20;
 
-	private static final int BLAST_RADIUS = 5;
+	private static final int BLAST_RADIUS = 4;
 	/** One block of reach past the crater, which is where the shell can be. */
 	private static final int SHELL_RADIUS = BLAST_RADIUS + 1;
 	/** setBlock flag: update neighbours and notify clients, the ordinary "a block changed" set. */
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
 	/**
-	 * The molten palette, one entry per weight — magma, netherrack and coal at 3 each, lava at 1.
+	 * The molten palette, one entry per weight — magma, netherrack and coal at 4 each, lava at 1.
 	 * A flat array is the weighting: picking a random index is the weighted draw, with no running
 	 * total to keep in step with the table.
+	 *
+	 * <p>4:4:4:1 rather than 3:3:3:1 because lava's weight was cut by a quarter, which is the same
+	 * ratio written in whole numbers. It takes lava from one shell block in ten to one in thirteen.
 	 */
 	private static final Block[] MOLTEN = {
-		Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK,
-		Blocks.NETHERRACK, Blocks.NETHERRACK, Blocks.NETHERRACK,
-		Blocks.COAL_BLOCK, Blocks.COAL_BLOCK, Blocks.COAL_BLOCK,
+		Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK,
+		Blocks.NETHERRACK, Blocks.NETHERRACK, Blocks.NETHERRACK, Blocks.NETHERRACK,
+		Blocks.COAL_BLOCK, Blocks.COAL_BLOCK, Blocks.COAL_BLOCK, Blocks.COAL_BLOCK,
 		Blocks.LAVA,
 	};
 
@@ -46,9 +49,9 @@ public final class MoltenBlast {
 		BlockPos centre = player.blockPosition();
 		RandomSource random = level.getRandom();
 
-		// Pass one: erase the crater. No drops — a radius-5 sphere is over five hundred blocks, and
-		// dropping them would bury the player in item entities and cost the server more than the
-		// blast itself.
+		// Pass one: erase the crater. No drops — even a radius-4 sphere is a couple of hundred
+		// blocks, and dropping them would bury the player in item entities and cost the server more
+		// than the blast itself.
 		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-BLAST_RADIUS, -BLAST_RADIUS, -BLAST_RADIUS),
 				centre.offset(BLAST_RADIUS, BLAST_RADIUS, BLAST_RADIUS))) {
 			if (!within(centre, pos, BLAST_RADIUS) || !destructible(level, pos)) {
