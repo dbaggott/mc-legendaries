@@ -92,9 +92,15 @@ public final class Pedestal {
 	/**
 	 * Builds the pedestal if it is not standing, and does nothing if it is.
 	 *
-	 * <p>Called once a session, from a tick that has waited for the site's chunk to be loaded.
-	 * Waiting matters: an entity in an unloaded chunk is not in the world's index, so an eager
-	 * check would find nothing standing and build a second pedestal on top of the first.
+	 * <p>Three callers, and only one of them waits. The session tick holds off until the site's
+	 * <em>entity index</em> reports loaded — not merely its chunk, which arrives first and would
+	 * make a standing pedestal read as absent. {@code place()} and {@code move()} call this
+	 * whenever they need it, so both can still raise a duplicate inside that window.
+	 *
+	 * <p>That is tolerable rather than ignored: a duplicate is a wrong-sized set, and the next
+	 * {@code ensure()} rebuilds it — carrying the spear across, which is what stops a duplicate
+	 * from costing the one spear in the world. Do not make the rebuild cheaper by skipping that
+	 * carry.
 	 */
 	public static void ensure(MinecraftServer server) {
 		SpearState state = SpearState.get(server);
