@@ -2,6 +2,7 @@ package io.dnbg.minecraft.legendaries.spear;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.minecraft.network.chat.Component;
@@ -16,6 +17,8 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.DecoratedPotBlock;
+import net.minecraft.world.level.block.ShelfBlock;
 
 /**
  * The rules that follow the spear around: what it grants, what it refuses, and what no longer
@@ -37,7 +40,8 @@ public final class SpearRules {
 		stripSpearDrops();
 		ServerEntityEvents.ENTITY_LOAD.register(Pedestal::discardStaleOnLoad);
 		grantSpeedWhileCarried();
-		refuseDisplayMounts();
+		wireEntityInteractions();
+		refuseDirectPlacement();
 	}
 
 	/**
@@ -50,7 +54,10 @@ public final class SpearRules {
 	 */
 	private static void stripSpearDrops() {
 		LootTableEvents.MODIFY_DROPS.register((key, context, stacks) ->
-				stacks.removeIf(stack -> stack.is(ItemTags.SPEARS)));
+				// Unmarked spears only. A mob that got hold of the legendary despite the refusals
+				// can reach a drop, and stripping it here would have this mod destroying the one
+				// item everything else in it exists to keep.
+				stacks.removeIf(stack -> stack.is(ItemTags.SPEARS) && !NetheriteSpear.is(stack)));
 	}
 
 	private static void grantSpeedWhileCarried() {
@@ -83,13 +90,13 @@ public final class SpearRules {
 	}
 
 	/**
-	 * Item frames and armor stands are refused, and the pedestal's own interaction entity is what
-	 * hands the spear over.
+	 * The two things a right-click on an entity can mean here: claiming the spear off its pedestal,
+	 * and trying to hang it somewhere it must not go.
 	 *
 	 * <p>A frame or a stand is not storage, but it takes the spear out of a player's hands and
-	 * leaves it hanging on a wall — the same outcome the container rules exist to prevent.
+	 * leaves it on a wall — the same outcome the container rules exist to prevent.
 	 */
-	private static void refuseDisplayMounts() {
+	private static void wireEntityInteractions() {
 		UseEntityCallback.EVENT.register((player, level, hand, entity, hitResult) -> {
 			if (entity instanceof Interaction && entity.entityTags().contains(Pedestal.TAG)) {
 				return claimFromPedestal(player);
@@ -101,6 +108,32 @@ public final class SpearRules {
 				return InteractionResult.PASS;
 			}
 			refuse(player, "The Netherite Spear will not be left on display.");
+			return InteractionResult.FAIL;
+		});
+	}
+
+	/**
+	 * Blocks that swallow a held item on right-click, with no screen in between.
+	 *
+	 * <p>{@code Slot.mayPlace} cannot see these: a shelf and a decorated pot take the stack straight
+	 * out of the hand in {@code useItemOn} without ever building a menu. A shelf accepts anything,
+	 * and a decorated pot only checks that it is currently empty. Hoppers feeding either are already
+	 * refused, because both block entities are ordinary containers — it is only the hand-placement
+	 * that needs its own answer.
+	 *
+	 * <p>A chiseled bookshelf is deliberately absent: it filters on {@code #bookshelf_books}, so a
+	 * spear cannot reach it in the first place.
+	 */
+	private static void refuseDirectPlacement() {
+		UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
+			if (!NetheriteSpear.is(player.getItemInHand(hand))) {
+				return InteractionResult.PASS;
+			}
+			var block = level.getBlockState(hitResult.getBlockPos()).getBlock();
+			if (!(block instanceof ShelfBlock) && !(block instanceof DecoratedPotBlock)) {
+				return InteractionResult.PASS;
+			}
+			refuse(player, "The Netherite Spear will not be set down there.");
 			return InteractionResult.FAIL;
 		});
 	}

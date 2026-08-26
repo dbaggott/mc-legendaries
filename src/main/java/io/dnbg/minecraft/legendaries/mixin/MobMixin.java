@@ -14,30 +14,33 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Keeps spears out of mobs' hands, in the two ways a mob can get one.
+ * Keeps spears out of mobs' hands — with the emphasis on "keeps", not "prevents".
  *
- * <p><strong>Picking the legendary up.</strong> A mob equipping it would take it outside every
- * other rule here — it is no longer in a container, no longer an item entity, and no longer
- * anywhere the pedestal hook can see. Worse, the loss backstop cannot even catch the moment:
- * {@code pickUpItem} copies the stack, equips the copy, then {@code shrink}s the live one before
- * discarding the entity, so by the time {@code setRemoved} runs the stack is already empty and the
- * spear reads as an ordinary vanished item. The mob then despawns or burns and the one spear in
- * the world is gone for good.
+ * <p>Prevention here is best-effort by nature. {@code Mob.pickUpItem} is virtual and nine classes
+ * override it; a fox and a dolphin never call {@code equipItemIfPossible} at all, and
+ * {@code PiglinAi.pickUpItem} discards the item entity <em>before</em> asking, then files the stack
+ * into the piglin's own inventory when the answer is no. Hooking the equip call therefore misses
+ * two of those and makes the third worse. {@code canHoldItem} is the real decision point for
+ * everything that inherits it, so that is what is refused here — but it is not a guarantee, and it
+ * is deliberately not treated as one.
  *
- * <p><strong>Dropping a vanilla one on death.</strong> Mob equipment does not drop through a loot
- * table: {@code dropCustomDeathLoot} rolls {@code dropChances} and calls {@code spawnAtLocation}
- * directly, which {@code LootTableEvents.MODIFY_DROPS} never sees. Stripping the equipment first is
- * what makes "mobs fight with spears but never drop one" true, rather than only true of chests.
+ * <p>The guarantee is recovery instead, and it lives in {@code EntityMixin}: a mob can only put the
+ * spear in an equipment slot or a carried inventory, and both are read back when the mob is
+ * removed. That holds for overrides nobody has enumerated.
+ *
+ * <p>Which is why {@link #legendaries$stripSpearsBeforeDropping} strips only <em>unmarked</em>
+ * spears. Mob equipment does not drop through a loot table — {@code dropCustomDeathLoot} rolls
+ * {@code dropChances} and calls {@code spawnAtLocation} directly, which
+ * {@code LootTableEvents.MODIFY_DROPS} never sees — so this is what makes "mobs fight with spears
+ * but never drop one" true. Matching the legendary here as well would have this code destroying the
+ * very thing the rest of it exists to protect.
  */
 @Mixin(Mob.class)
 public abstract class MobMixin {
-	@Inject(method = "equipItemIfPossible", at = @At("HEAD"), cancellable = true)
-	private void legendaries$refuseTheSpear(ServerLevel level, ItemStack stack,
-			CallbackInfoReturnable<ItemStack> cir) {
+	@Inject(method = "canHoldItem", at = @At("HEAD"), cancellable = true)
+	private void legendaries$refuseTheSpear(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		if (NetheriteSpear.is(stack)) {
-			// An empty return is how this method says "equipped nothing", which leaves the item
-			// entity intact on the ground rather than consumed.
-			cir.setReturnValue(ItemStack.EMPTY);
+			cir.setReturnValue(false);
 		}
 	}
 
@@ -46,7 +49,8 @@ public abstract class MobMixin {
 			boolean hitByPlayer, CallbackInfo ci) {
 		Mob self = (Mob) (Object) this;
 		for (EquipmentSlot slot : EquipmentSlot.VALUES) {
-			if (self.getItemBySlot(slot).is(ItemTags.SPEARS)) {
+			ItemStack held = self.getItemBySlot(slot);
+			if (held.is(ItemTags.SPEARS) && !NetheriteSpear.is(held)) {
 				self.setItemSlot(slot, ItemStack.EMPTY);
 			}
 		}
