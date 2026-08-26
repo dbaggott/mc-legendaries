@@ -24,7 +24,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
  * {@code SavedDataStorage} is per-level, so keeping this per-dimension would give the Nether its own
  * set — "one in the entire world" has to mean one across every dimension.
  *
- * <p>Both sets are keyed by {@link Legendary#name()} rather than by ordinal, so reordering or
+ * <p>Everything here is keyed by {@link Legendary#name()} rather than by ordinal, so reordering or
  * removing an entry in the enum cannot silently reassign a world's saved state to a different item.
  * An unrecognised name is dropped on read, which is what makes removing a legendary safe.
  *

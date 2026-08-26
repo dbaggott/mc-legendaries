@@ -66,9 +66,9 @@ public final class MoltenBlast {
 		// rather than an afterthought once the ground has already gone.
 		announce(level, centre, blastRadius);
 
-		// Pass one: erase the crater. No drops — even a radius-4 sphere is a couple of hundred
-		// blocks, and dropping them would bury the player in item entities and cost the server more
-		// than the blast itself.
+		// Pass one: erase the crater. No drops — the sphere runs to hundreds of blocks and grows with
+		// the cube of the radius, so dropping them would bury the player in item entities and cost
+		// the server more than the blast itself.
 		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-blastRadius, -blastRadius, -blastRadius),
 				centre.offset(blastRadius, blastRadius, blastRadius))) {
 			if (!within(centre, pos, blastRadius) || !destructible(level, pos)) {

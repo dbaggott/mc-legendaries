@@ -213,7 +213,9 @@ public final class LegendaryCommand {
 		LegendaryState.get(source.getServer()).setSetting(legendary, setting, value);
 		source.sendSuccess(() -> Component.literal(legendary.displayName() + " " + setting.commandName()
 				+ " set to " + value + " " + setting.unit()), true);
-		return value;
+		// One setting changed. Returning `value` would make `config set mace cooldown 0` report a
+		// zero result out of a call that succeeded, which is what `execute store result` reads.
+		return 1;
 	}
 
 	private static int move(CommandSourceStack source, BlockPos target) {

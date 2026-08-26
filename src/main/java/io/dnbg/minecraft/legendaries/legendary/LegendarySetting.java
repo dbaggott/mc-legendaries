@@ -16,8 +16,11 @@ public enum LegendarySetting {
 	/**
 	 * Blocks of radius for an ability's area of effect.
 	 *
-	 * <p>Capped well below what the machine would tolerate: cost grows with the cube of this, and a
-	 * setting meant for experimenting should not be able to stall a server by mistyping a digit.
+	 * <p>Cost grows with the cube of this, and every block in range is a {@code setBlock} with
+	 * neighbour updates and a client packet, all on one synchronous tick. 16 is a bound on how far a
+	 * mistyped digit can go — roughly sixty-seven times the default's volume — rather than a
+	 * measured safe ceiling. Nobody has profiled it; treat the top of the range as the interesting
+	 * end, not the supported one.
 	 */
 	RADIUS(4, 0, 16, "blocks");
 

@@ -42,13 +42,13 @@ import net.minecraft.world.item.component.CustomData;
 public enum Legendary {
 	/** Replaces every vanilla spear recipe; see {@code data/legendaries/recipe/netherite_spear.json}. */
 	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Netherite Spear",
-			"legendaries:netherite_spear", MobEffects.SPEED, 1),
+			"legendaries:netherite_spear", MobEffects.SPEED, 1, false),
 
 	/**
 	 * Crafted by the vanilla recipe, which is overridden in place to mark its result — the
 	 * ingredients and pattern are untouched, so it is still "the mace recipe" to a player.
 	 */
-	MACE("legendaries_mace", Items.MACE, "The Mace", "minecraft:mace", null, 0);
+	MACE("legendaries_mace", Items.MACE, "The Mace", "minecraft:mace", null, 0, true);
 
 	private final String marker;
 	private final Item item;
@@ -56,20 +56,29 @@ public enum Legendary {
 	private final String recipeId;
 	private final Holder<MobEffect> carriedEffect;
 	private final int carriedAmplifier;
+	private final boolean hasAbility;
 
 	Legendary(String marker, Item item, String displayName, String recipeId,
-			Holder<MobEffect> carriedEffect, int carriedAmplifier) {
+			Holder<MobEffect> carriedEffect, int carriedAmplifier, boolean hasAbility) {
 		this.marker = marker;
 		this.item = item;
 		this.displayName = displayName;
 		this.recipeId = recipeId;
 		this.carriedEffect = carriedEffect;
 		this.carriedAmplifier = carriedAmplifier;
+		this.hasAbility = hasAbility;
 	}
 
-	/** Whether this legendary has an ability whose cooldown and radius mean anything. */
+	/**
+	 * Whether this legendary has an ability whose cooldown and radius mean anything.
+	 *
+	 * <p>A property of the entry rather than a test against a particular constant. Written as
+	 * {@code this == MACE} it would be the one place a third legendary with an ability had to be
+	 * remembered, with no compiler error if it were not — the symptom being {@code config get}
+	 * insisting something plainly powerful has nothing to configure.
+	 */
 	public boolean hasAbility() {
-		return this == MACE;
+		return hasAbility;
 	}
 
 	/** The lowercase name this legendary answers to on the command line. */
