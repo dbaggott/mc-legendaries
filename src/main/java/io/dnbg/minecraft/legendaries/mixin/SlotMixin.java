@@ -74,7 +74,7 @@ public abstract class SlotMixin {
 		if (server == null || !SpearState.get(server).crafted()) {
 			return;
 		}
-		SpearRules.refuse(player, "The Netherite Spear already exists in this world.");
+		SpearRules.refuse(player, "The Netherite Spear has already been crafted.");
 		cir.setReturnValue(false);
 	}
 }
