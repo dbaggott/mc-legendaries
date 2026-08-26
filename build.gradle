@@ -121,10 +121,11 @@ publishMods {
 		}
 		changelogFile.asFile.text
 	}
-	// STABLE rather than BETA even at 0.x: the first release will be 1.0.0, so
-	// there is no 0.x line for players to be warned about. Bumping mod_version
-	// straight to 1.0.0 is the release, not a separate cut-over.
-	type = STABLE
+	// BETA while the version is 0.x. Every rule this mod adds is a refusal on a
+	// player action, and the ones that matter most have been reasoned about far
+	// more than they have been played. Switch to STABLE at 1.0.0, once that is
+	// the other way round.
+	type = BETA
 	modLoaders.add("fabric")
 
 	modrinth {
@@ -132,8 +133,8 @@ publishMods {
 		accessToken = providers.environmentVariable("MODRINTH_API_KEY")
 		// Stable MC releases only — deliberately narrower than what the jar can
 		// load on. fabric.mod.json admits the whole 26.3 line (snapshots
-		// included), but `type = STABLE` above makes every row here a support
-		// claim, and a snapshot claim expires the week Mojang ships the next
+		// included), but every row here is a support claim regardless of release
+		// channel, and a snapshot claim expires the week Mojang ships the next
 		// one. Add "26.3" here when 26.3 leaves snapshot; the already-published
 		// jar runs on it unchanged, so that is a metadata edit, not a release.
 		//
