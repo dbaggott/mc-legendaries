@@ -28,24 +28,24 @@ public final class MoltenBlast {
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
 	/**
-	 * What the shell turns into. Drawn uniformly — lava was in here and is not any more: it flows out
-	 * of the shell and keeps going, so a blast left a spreading mess rather than a crater.
-	 */
-	private static final Block[] MOLTEN = {
-		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK,
-	};
-
-	/**
-	 * The share of blocks the blast passes over untouched, in both passes.
+	 * What a shell block becomes, and how often.
 	 *
-	 * <p>Without it the crater is a geometrically perfect sphere with a uniform lining, which reads
-	 * as a cut rather than a blast. Sparing one block in five leaves original stone and ore standing
-	 * in the hole and breaks up the lining, so what the ground was made of is still visible in what
-	 * is left of it.
+	 * <p>A {@code null} entry means <em>leave it as it is</em>. It is an outcome rather than a
+	 * separate skip so the mix stays in one table: retuning how much original rock shows through is
+	 * a weight change here, not a second concept somewhere else.
+	 *
+	 * <p>4:4:4:3 totals fifteen, putting leave-as-is at exactly three in fifteen — one shell block in
+	 * five keeps whatever it was made of, which is what stops the lining reading as a uniform coat.
+	 *
+	 * <p>Lava was among these and is not any more: it flowed out of the shell and kept going, so a
+	 * blast left a spreading mess rather than a crater.
 	 */
-	private static final float SPARE_CHANCE = 0.2f;
+	private static final Block[] SHELL = {
+		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK, null,
+	};
+	private static final int[] SHELL_WEIGHTS = {4, 4, 4, 3};
 
-	/** Explosion puffs across the crater, and flames clinging to the molten shell. */
+	/** Explosion puffs across the crater, and flames clinging to each newly-molten shell block. */
 	private static final int EXPLOSION_PUFFS = 40;
 	private static final int FLAMES_PER_SHELL_BLOCK = 2;
 
@@ -65,7 +65,7 @@ public final class MoltenBlast {
 		// than the blast itself.
 		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-BLAST_RADIUS, -BLAST_RADIUS, -BLAST_RADIUS),
 				centre.offset(BLAST_RADIUS, BLAST_RADIUS, BLAST_RADIUS))) {
-			if (!within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || spared(random)) {
+			if (!within(centre, pos, BLAST_RADIUS) || !destructible(level, pos)) {
 				continue;
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), BLOCK_UPDATE);
@@ -75,11 +75,14 @@ public final class MoltenBlast {
 		// touch it — so the crater gets a molten lining rather than the whole neighbourhood changing.
 		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-SHELL_RADIUS, -SHELL_RADIUS, -SHELL_RADIUS),
 				centre.offset(SHELL_RADIUS, SHELL_RADIUS, SHELL_RADIUS))) {
-			if (within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || !bordersCrater(centre, pos)
-					|| spared(random)) {
+			if (within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || !bordersCrater(centre, pos)) {
 				continue;
 			}
-			level.setBlock(pos, MOLTEN[random.nextInt(MOLTEN.length)].defaultBlockState(), BLOCK_UPDATE);
+			Block molten = shellOutcome(random);
+			if (molten == null) {
+				continue;
+			}
+			level.setBlock(pos, molten.defaultBlockState(), BLOCK_UPDATE);
 			// Flames on the face that looks into the crater, so the lining reads as freshly molten.
 			level.sendParticles(ParticleTypes.FLAME, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
 					FLAMES_PER_SHELL_BLOCK, 0.3, 0.3, 0.3, 0.01);
@@ -108,9 +111,21 @@ public final class MoltenBlast {
 				BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, 0.05);
 	}
 
-	/** Whether this block is one of the lucky ones the blast leaves standing. */
-	private static boolean spared(RandomSource random) {
-		return random.nextFloat() < SPARE_CHANCE;
+	/** A weighted draw from {@link #SHELL}; null means leave the block as it is. */
+	private static Block shellOutcome(RandomSource random) {
+		int total = 0;
+		for (int weight : SHELL_WEIGHTS) {
+			total += weight;
+		}
+		int roll = random.nextInt(total);
+		for (int i = 0; i < SHELL.length; i++) {
+			roll -= SHELL_WEIGHTS[i];
+			if (roll < 0) {
+				return SHELL[i];
+			}
+		}
+		// Unreachable: roll is bounded by the same total the loop subtracts.
+		return null;
 	}
 
 	private static boolean within(BlockPos centre, BlockPos pos, int radius) {

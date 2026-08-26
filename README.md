@@ -68,11 +68,13 @@ plain ones. It is unbreakable.
 ### Molten Blast
 
 **Sneak and right-click** to erase every block within four of you — in all directions, including
-straight down — and turn the shell left behind into molten rock: magma, netherrack or coal, chosen
-evenly between them. It goes off with an explosion burst and flames.
+straight down — and turn the shell left behind into molten rock. It goes off with an explosion burst
+and flames.
 
-**One block in five is spared**, in both the crater and its lining, so original stone and ore stay
-standing in the hole rather than leaving a geometrically perfect sphere.
+Everything inside the radius goes. What varies is the lining: each shell block draws from magma,
+netherrack, coal, or **left as it is** at weights 4 / 4 / 4 / 3 — so one shell block in five keeps
+whatever it was made of, and the crater's edge shows the ground it was cut from rather than a
+uniform coat.
 
 Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
 or the Nether roof. Nothing drops; a sphere that size is over two hundred blocks and would bury you in items. **60 second
