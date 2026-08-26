@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "TNH",
+    "KBN",
+    "BKT"
+  ],
+  "key": {
+    "T": "minecraft:netherite_upgrade_smithing_template",
+    "N": "minecraft:netherite_ingot",
+    "H": "minecraft:heavy_core",
+    "K": "minecraft:ominous_trial_key",
+    "B": "minecraft:breeze_rod"
+  },
+  "result": {
+    "id": "minecraft:netherite_spear",
+    "components": {
+      "minecraft:custom_data": {
+        "legendaries_spear": true
+      },
+      "minecraft:unbreakable": {},
+      "minecraft:enchantments": {
+        "minecraft:lunge": 3,
+        "minecraft:sharpness": 5,
+        "minecraft:fire_aspect": 2,
+        "minecraft:looting": 3
+      }
+    }
+  }
+}

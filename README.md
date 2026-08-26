@@ -7,37 +7,59 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own crafting recipes, their own rules, and no other way to
 obtain them.
 
+One legendary exists so far: the **Netherite Spear**.
+
 The mod is **common**, not client-only — every rule it adds is decided on the
 logical server, so it installs on a dedicated server and vanilla clients can
 connect.
 
-## Status
-
-**Nothing is implemented yet.** This is the build scaffold: the mod loads, logs
-its name, and registers no content. What follows is the agreed design for the
-first legendary, not a description of shipped behaviour.
-
-## Planned: the Netherite Spear
+## The Netherite Spear
 
 One per world, and the only spear obtainable at all.
 
-- Every vanilla spear recipe is removed — the six shaped crafting recipes and
-  the netherite smithing transform — and replaced by a single new crafting
-  recipe that yields the Netherite Spear.
-- Spears are removed from the six vanilla loot tables that carry them
-  (`bastion_treasure`, `buried_treasure`, `end_city_treasure`,
-  `underwater_ruin_big`, `underwater_ruin_small`, `village_weaponsmith`).
-- Crafting it once permanently consumes the recipe for that world.
-- It is unbreakable, and comes pre-enchanted with **Lunge III, Sharpness V,
-  Fire Aspect II, Looting III** — the vanilla maximum of each.
-- Carrying it grants **Speed II**, in hand or in inventory.
-- It cannot be put into any container: chests, barrels, ender chests, shulker
-  boxes, hoppers, item frames, armor stands. The attempt is refused rather than
-  punished.
-- It cannot be permanently lost. If it is destroyed (lava, fire, cactus,
-  explosion, the void) or despawns after being left on the ground, it
-  rematerialises on its **pedestal** — a non-collidable display entity placed
-  at world spawn on first use, relocatable afterwards by an admin command.
+**Getting it.** Every vanilla spear recipe is gone — the six shaped crafting
+recipes and the netherite smithing transform — replaced by a single crafting
+recipe of Trial Chamber and Nether endgame loot:
+
+|   |   |   |
+|---|---|---|
+| Smithing template | Netherite ingot | Heavy core |
+| Ominous trial key | Breeze rod | Netherite ingot |
+| Breeze rod | Ominous trial key | Smithing template |
+
+Like every vanilla shaped recipe it also accepts the left-right mirror of that
+grid. Crafting it once consumes the recipe for that world: the result still
+previews, but it cannot be taken again.
+
+**Carrying it.** It is unbreakable, comes enchanted with **Lunge III,
+Sharpness V, Fire Aspect II and Looting III** — the vanilla maximum of each —
+and grants **Speed II** while it is in your inventory or your hand.
+
+**Keeping it.** It cannot be put into any container: chests, barrels, ender
+chests, shulker boxes, item frames, armor stands. Hoppers will not take it
+either, so the rule cannot be routed around with redstone. Dropping it, dying
+with it and handing it to another player all work normally.
+
+**Losing it.** You cannot. It is fire- and lava-immune already, because vanilla
+registers `netherite_spear` as fire-resistant. Anything that would genuinely
+destroy it — an explosion, a cactus, the void — or leaving it on the ground
+until it despawns puts it back on its **pedestal**: a non-collidable display
+entity that appears at world spawn the first time it is needed, and can be
+moved afterwards. Right-click the pedestal to take the spear back.
+
+**Spears elsewhere.** No spear drops from any loot table any more. Mobs still
+spawn with spears and fight with them — the vanilla spear AI is untouched — but
+they never drop one.
+
+## Admin
+
+```
+/legendaries pedestal where      # where it is, and whether the spear is on it
+/legendaries pedestal here       # move it to where you are standing
+/legendaries pedestal at <x y z> # move it to a specific block
+```
+
+Requires permission level 2. Moving an occupied pedestal carries the spear.
 
 ## Installing
 
@@ -64,12 +86,25 @@ server running it.
 | JDK | Temurin 25 (pinned via `mise.toml`) |
 | Gradle | 9.x via wrapper |
 
-The claimed range holds because spears and the Lunge enchantment are present
-unchanged across all four lines — each ships the same seven spear recipes and
-the same `lunge.json`. The declared `fabric-api` floor is provisional: no
-Fabric API call exists yet, so it is pinned to the oldest release built for
-26.1 rather than to a tested requirement. It gets a real reason when the first
-API use lands.
+The claimed range holds for the things this mod depends on, which is not the
+same as nothing having moved. Each line ships the same seven spear recipes and
+the same `lunge.json`, and every class the mixins target — including the two
+private fields the pedestal reaches for — is byte-identical across 26.1,
+26.1.2, 26.2 and the 26.3 snapshot.
+
+Plenty else did move. The entity-type constants are the example that bit:
+`EntityType.BLOCK_DISPLAY` in 26.1 became `EntityTypes.BLOCK_DISPLAY` in 26.2,
+so either spelling breaks half the range. The pedestal looks its entity types up
+in `BuiltInRegistries` by id instead, which is stable across all four — and the
+CI matrix is what caught it.
+
+The `fabric-api` floor is no longer provisional: the CI floor row compiles this
+mod's actual API calls against 0.143.12, so the declared minimum is a tested
+claim rather than a guess.
+
+A mixin that loses its target fails at load with `"required": true`, rather
+than silently doing nothing — and the non-blocking 26.3 snapshot row is there to
+surface that the week it happens.
 
 ## Building
 

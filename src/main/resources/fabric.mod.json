@@ -12,6 +12,9 @@
 	},
 	"license": "MIT",
 	"environment": "*",
+	"mixins": [
+		"legendaries.mixins.json"
+	],
 	"entrypoints": {
 		"main": [
 			"io.dnbg.minecraft.legendaries.Legendaries"
