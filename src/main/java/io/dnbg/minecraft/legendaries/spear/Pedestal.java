@@ -28,6 +28,12 @@ import net.minecraft.world.phys.AABB;
  * right-click into a claim. Nothing is placed in the world, so there is nothing to mine, nothing
  * to grief, and nothing to collide with — a display entity has no collision at all.
  *
+ * <p><strong>The pedestal is a fixture, not a container that appears when full.</strong> It stands
+ * at world spawn from the first tick of a world and stays there whether or not the spear is on it;
+ * only the item display's contents change. Building it on arrival and tearing it down on collection
+ * made it invisible in the state that matters most — the spear is out there somewhere, and the
+ * empty plinth is the thing that tells you where it will come back to.
+ *
  * <p><strong>The item display holds the authoritative stack.</strong> The spear that returns here
  * is the same stack that left, kept on the display rather than copied into saved data — so a
  * rename or an added enchantment survives a trip to the pedestal, and there is no second
@@ -41,6 +47,7 @@ public final class Pedestal {
 	private static final double SPEAR_HOVER = 1.25;
 	private static final float INTERACTION_SIZE = 1.5f;
 	private static final double SEARCH_RADIUS = 3.0;
+	private static final int PEDESTAL_PARTS = 3;
 
 	private Pedestal() {
 	}
@@ -82,26 +89,82 @@ public final class Pedestal {
 		return surface;
 	}
 
-	/** Puts the spear on the pedestal, replacing anything already standing there. */
+	/**
+	 * Builds the pedestal if it is not standing, and does nothing if it is.
+	 *
+	 * <p>Three callers, and only one of them waits. The session tick holds off until the site's
+	 * <em>entity index</em> reports loaded — not merely its chunk, which arrives first and would
+	 * make a standing pedestal read as absent. {@code place()} and {@code move()} call this
+	 * whenever they need it, so both can still raise a duplicate inside that window.
+	 *
+	 * <p>That is tolerable rather than ignored: a duplicate is a wrong-sized set, and the next
+	 * {@code ensure()} rebuilds it — carrying the spear across, which is what stops a duplicate
+	 * from costing the one spear in the world. Do not make the rebuild cheaper by skipping that
+	 * carry.
+	 */
+	public static void ensure(MinecraftServer server) {
+		SpearState state = SpearState.get(server);
+		BlockPos pos = position(server, state);
+		ServerLevel level = SpearState.home(server);
+		if (ours(level, pos).size() == PEDESTAL_PARTS) {
+			return;
+		}
+		// A wrong-sized set means something was removed out from under us, or a duplicate was
+		// raised. Rebuild the whole thing rather than guess which piece is wrong — but carry the
+		// spear across first. The display holds the authoritative stack, so discarding it without
+		// reading it destroys the spear outright: the state would still say the spear is home,
+		// take() would refuse to correct it, place() would refuse to re-home it, and `crafted`
+		// would still block a replacement.
+		ItemStack held = heldStack(level, pos);
+		clearEntities(level, pos);
+		build(level, pos);
+		if (!held.isEmpty()) {
+			show(level, pos, held);
+			Legendaries.LOGGER.warn("Rebuilt the pedestal at {} and put the spear back on it", pos);
+		}
+		Legendaries.LOGGER.info("Pedestal standing at {}", pos);
+	}
+
+	/** Puts the spear on the pedestal, building it first if it somehow is not there. */
 	public static void place(MinecraftServer server, ItemStack spear) {
 		SpearState state = SpearState.get(server);
 		if (state.spearOnPedestal()) {
-			// Already standing there. Placing again would build a second pedestal on top of the
-			// first, and only one of them would be the one the state points at.
 			Legendaries.LOGGER.warn("Ignoring a return to the pedestal while the spear is already on it");
 			return;
 		}
 		BlockPos pos = position(server, state);
 		ServerLevel level = SpearState.home(server);
-		clearEntities(level, pos);
-
-		// Mark the spear home BEFORE spawning anything. Spawning into a loaded chunk fires the
-		// entity-load event synchronously, and discardStaleOnLoad reads this flag to decide what
-		// belongs — so setting it afterwards makes the pedestal delete itself on creation, but only
-		// where the chunk happened to be warm.
 		state.setSpearOnPedestal(true);
+		ensure(server);
+		show(level, pos, spear.copy());
+		Legendaries.LOGGER.info("Netherite Spear returned to its pedestal at {}", pos);
+	}
 
-		Display.BlockDisplay plinth = Pedestal.<Display.BlockDisplay>type("block_display").create(level, EntitySpawnReason.COMMAND);
+	/** What the pedestal's item display is holding, or empty if it is bare or unreadable. */
+	private static ItemStack heldStack(ServerLevel level, BlockPos pos) {
+		for (Entity entity : ours(level, pos)) {
+			if (entity instanceof Display.ItemDisplay display) {
+				ItemStack candidate = display.getSlot(0).get();
+				if (NetheriteSpear.is(candidate)) {
+					return candidate.copy();
+				}
+			}
+		}
+		return ItemStack.EMPTY;
+	}
+
+	/** Sets what the pedestal's item display is holding; an empty stack leaves it bare. */
+	private static void show(ServerLevel level, BlockPos pos, ItemStack stack) {
+		for (Entity entity : ours(level, pos)) {
+			if (entity instanceof Display.ItemDisplay display) {
+				display.getSlot(0).set(stack);
+			}
+		}
+	}
+
+	private static void build(ServerLevel level, BlockPos pos) {
+		Display.BlockDisplay plinth = Pedestal.<Display.BlockDisplay>type("block_display")
+				.create(level, EntitySpawnReason.COMMAND);
 		if (plinth != null) {
 			plinth.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
 			plinth.getEntityData().set(BlockDisplayAccessor.blockStateId(), Blocks.LODESTONE.defaultBlockState());
@@ -109,10 +172,10 @@ public final class Pedestal {
 			level.addFreshEntity(plinth);
 		}
 
-		Display.ItemDisplay shown = Pedestal.<Display.ItemDisplay>type("item_display").create(level, EntitySpawnReason.COMMAND);
+		Display.ItemDisplay shown = Pedestal.<Display.ItemDisplay>type("item_display")
+				.create(level, EntitySpawnReason.COMMAND);
 		if (shown != null) {
 			shown.snapTo(pos.getX() + 0.5, pos.getY() + SPEAR_HOVER, pos.getZ() + 0.5, 0.0f, 0.0f);
-			shown.getSlot(0).set(spear.copy());
 			shown.addTag(TAG);
 			level.addFreshEntity(shown);
 		}
@@ -125,15 +188,14 @@ public final class Pedestal {
 			click.addTag(TAG);
 			level.addFreshEntity(click);
 		}
-
-		Legendaries.LOGGER.info("Netherite Spear returned to its pedestal at {}", pos);
 	}
 
 	/**
 	 * Takes the spear off the pedestal, or returns empty if it is not there.
 	 *
 	 * <p>The stack comes off the item display rather than being rebuilt, so whatever the spear
-	 * carried when it arrived is what leaves.
+	 * carried when it arrived is what leaves. The pedestal itself stays standing — only what it is
+	 * holding changes.
 	 */
 	public static ItemStack take(MinecraftServer server) {
 		SpearState state = SpearState.get(server);
@@ -142,15 +204,7 @@ public final class Pedestal {
 		}
 		BlockPos pos = position(server, state);
 		ServerLevel level = SpearState.home(server);
-		ItemStack held = ItemStack.EMPTY;
-		for (Entity entity : ours(level, pos)) {
-			if (entity instanceof Display.ItemDisplay display) {
-				ItemStack candidate = display.getSlot(0).get();
-				if (NetheriteSpear.is(candidate)) {
-					held = candidate.copy();
-				}
-			}
-		}
+		ItemStack held = heldStack(level, pos);
 		if (held.isEmpty()) {
 			// Nothing was recovered, which normally means the display's chunk has not loaded its
 			// entities yet rather than that the pedestal is empty. Leave the state exactly as it
@@ -160,7 +214,7 @@ public final class Pedestal {
 			Legendaries.LOGGER.warn("Could not read the spear off its pedestal at {} — leaving it there", pos);
 			return ItemStack.EMPTY;
 		}
-		clearEntities(level, pos);
+		show(level, pos, ItemStack.EMPTY);
 		state.setSpearOnPedestal(false);
 		return held;
 	}
@@ -199,9 +253,10 @@ public final class Pedestal {
 		}
 		SpearState state = SpearState.get(server);
 		BlockPos current = state.pedestalPos();
-		boolean belongs = state.spearOnPedestal()
-				&& current != null
-				&& entity.blockPosition().closerThan(current, SEARCH_RADIUS);
+		// Position alone decides. The pedestal now stands whether or not it is holding anything, so
+		// asking whether the spear is home would sweep away the empty plinth that is the whole
+		// point of it being permanent.
+		boolean belongs = current != null && entity.blockPosition().closerThan(current, SEARCH_RADIUS);
 		if (!belongs) {
 			entity.discard();
 		}
