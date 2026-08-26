@@ -83,10 +83,24 @@ It is centred on you and it does not care that you are standing there. Expect to
 ## Admin
 
 ```
-/legendaries pedestal where      # where it is, and whether the spear is on it
-/legendaries pedestal here       # move it to where you are standing
-/legendaries pedestal at <x y z> # move it to a specific block
+/legendaries pedestal where               # where it is, and what is standing on it
+/legendaries pedestal here                # move it to where you are standing
+/legendaries pedestal at <x y z>          # move it to a specific block
+
+/legendaries item give <players> <name>   # hand out a legendary
+/legendaries item delete <players> <name> # take every copy back
 ```
+
+`<name>` is `netherite_spear` or `mace`, tab-completed.
+
+**`item give` ignores the one-per-world rule** — that is what it is for, whether you are recovering
+a legendary lost to something the backstop could not catch or testing a change. It does not mark the
+world as having crafted one, so the crafting route stays open: a given copy is a copy, not the craft.
+The item is built by assembling that legendary's own recipe, so it is identical to a crafted one.
+
+If a duplicate is lost while the original is already home, it drops beside the pedestal rather than
+onto it — there is one display slot per legendary, and deleting the extra would make the command a
+way to destroy what it just handed out.
 
 Requires permission level 2. Moving an occupied pedestal carries whatever is on it.
 

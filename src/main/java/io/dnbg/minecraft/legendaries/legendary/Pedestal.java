@@ -15,6 +15,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Interaction;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -151,12 +152,19 @@ public final class Pedestal {
 			return;
 		}
 		LegendaryState state = LegendaryState.get(server);
-		if (state.onPedestal(legendary)) {
-			Legendaries.LOGGER.warn("Ignoring a return of {} while it is already on the pedestal", legendary);
-			return;
-		}
 		BlockPos pos = position(server, state);
 		ServerLevel level = LegendaryState.home(server);
+		if (state.onPedestal(legendary)) {
+			// A second copy of something that is supposed to be unique — which only the operator's
+			// `item give` can produce. There is one slot per legendary, so this one cannot be
+			// displayed; drop it at the pedestal rather than deleting it. Refusing quietly here
+			// would make the command a way to destroy the copies it just handed out.
+			Legendaries.LOGGER.warn("{} is already on the pedestal; dropping the returning copy beside it",
+					legendary.displayName());
+			level.addFreshEntity(new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
+					stack.copy()));
+			return;
+		}
 		// Mark it home BEFORE spawning anything. Spawning into a loaded chunk fires the entity-load
 		// event synchronously, and discardStaleOnLoad reads this state to decide what belongs — so
 		// setting it afterwards makes the display delete itself on creation, but only where the

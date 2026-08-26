@@ -1,15 +1,26 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import net.minecraft.world.item.ItemStack;
 
@@ -21,6 +32,9 @@ import net.minecraft.world.item.ItemStack;
  * difference.
  */
 public final class LegendaryCommand {
+	private static final DynamicCommandExceptionType UNKNOWN_LEGENDARY = new DynamicCommandExceptionType(
+			name -> Component.literal("No legendary called '" + name + "'"));
+
 	private LegendaryCommand() {
 	}
 
@@ -41,7 +55,92 @@ public final class LegendaryCommand {
 										.executes(context -> move(context.getSource(),
 												BlockPosArgument.getLoadedBlockPos(context, "pos")))))
 						.then(Commands.literal("where")
-								.executes(context -> report(context.getSource()))));
+								.executes(context -> report(context.getSource()))))
+				.then(Commands.literal("item")
+						.then(Commands.literal("give")
+								.then(Commands.argument("players", EntityArgument.players())
+										.then(legendaryArg()
+												// Legendary first, players second: a mistyped name
+												// should say so rather than being masked by a
+												// selector that matched nobody.
+												.executes(context -> {
+													Legendary legendary = namedLegendary(context);
+													return give(context.getSource(),
+															EntityArgument.getPlayers(context, "players"),
+															legendary);
+												}))))
+						.then(Commands.literal("delete")
+								.then(Commands.argument("players", EntityArgument.players())
+										.then(legendaryArg()
+												.executes(context -> {
+													Legendary legendary = namedLegendary(context);
+													return delete(context.getSource(),
+															EntityArgument.getPlayers(context, "players"),
+															legendary);
+												})))));
+	}
+
+	private static RequiredArgumentBuilder<CommandSourceStack, String> legendaryArg() {
+		return Commands.argument("legendary", StringArgumentType.word())
+				.suggests((context, builder) -> SharedSuggestionProvider.suggest(
+						Arrays.stream(Legendary.values()).map(Legendary::commandName), builder));
+	}
+
+	private static Legendary namedLegendary(CommandContext<CommandSourceStack> context)
+			throws CommandSyntaxException {
+		String name = StringArgumentType.getString(context, "legendary");
+		for (Legendary legendary : Legendary.values()) {
+			if (legendary.commandName().equals(name)) {
+				return legendary;
+			}
+		}
+		throw UNKNOWN_LEGENDARY.create(name);
+	}
+
+	/**
+	 * Hands out a legendary, bypassing the one-per-world rule entirely.
+	 *
+	 * <p>That is the point of it: this is the operator's escape hatch, for recovering a legendary
+	 * lost to something the backstop could not catch, or for testing. It does not mark the world as
+	 * having crafted one, so the crafting route stays open — a given copy is a copy, not the craft.
+	 *
+	 * <p>The stack comes from the legendary's own recipe rather than being built here, so a given
+	 * item is identical to a crafted one and cannot drift from it.
+	 */
+	private static int give(CommandSourceStack source, Collection<ServerPlayer> players, Legendary legendary) {
+		ItemStack template = legendary.create(source.getServer());
+		if (template.isEmpty()) {
+			source.sendFailure(Component.literal(
+					"No recipe for " + legendary.displayName() + " — a datapack may have removed it."));
+			return 0;
+		}
+		for (ServerPlayer player : players) {
+			ItemStack copy = template.copy();
+			if (!player.getInventory().add(copy)) {
+				player.drop(copy, false);
+			}
+		}
+		source.sendSuccess(() -> Component.literal(
+				"Gave " + legendary.displayName() + " to " + players.size() + " player(s)"), true);
+		return players.size();
+	}
+
+	/** Removes every copy of a legendary from the named players, and says how many it found. */
+	private static int delete(CommandSourceStack source, Collection<ServerPlayer> players, Legendary legendary) {
+		int removed = 0;
+		for (ServerPlayer player : players) {
+			Inventory inventory = player.getInventory();
+			for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+				if (legendary.is(inventory.getItem(slot))) {
+					inventory.setItem(slot, ItemStack.EMPTY);
+					removed++;
+				}
+			}
+		}
+		int total = removed;
+		source.sendSuccess(() -> Component.literal(
+				"Removed " + total + " " + legendary.displayName() + " from " + players.size() + " player(s)"), true);
+		return total;
 	}
 
 	private static int move(CommandSourceStack source, BlockPos target) {

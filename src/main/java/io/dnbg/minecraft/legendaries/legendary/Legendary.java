@@ -1,13 +1,22 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import java.util.Locale;
 import java.util.Optional;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.component.CustomData;
 
 /**
@@ -32,26 +41,56 @@ import net.minecraft.world.item.component.CustomData;
  */
 public enum Legendary {
 	/** Replaces every vanilla spear recipe; see {@code data/legendaries/recipe/netherite_spear.json}. */
-	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Netherite Spear", MobEffects.SPEED, 1),
+	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Netherite Spear",
+			"legendaries:netherite_spear", MobEffects.SPEED, 1),
 
 	/**
 	 * Crafted by the vanilla recipe, which is overridden in place to mark its result — the
 	 * ingredients and pattern are untouched, so it is still "the mace recipe" to a player.
 	 */
-	MACE("legendaries_mace", Items.MACE, "The Mace", null, 0);
+	MACE("legendaries_mace", Items.MACE, "The Mace", "minecraft:mace", null, 0);
 
 	private final String marker;
 	private final Item item;
 	private final String displayName;
+	private final String recipeId;
 	private final Holder<MobEffect> carriedEffect;
 	private final int carriedAmplifier;
 
-	Legendary(String marker, Item item, String displayName, Holder<MobEffect> carriedEffect, int carriedAmplifier) {
+	Legendary(String marker, Item item, String displayName, String recipeId,
+			Holder<MobEffect> carriedEffect, int carriedAmplifier) {
 		this.marker = marker;
 		this.item = item;
 		this.displayName = displayName;
+		this.recipeId = recipeId;
 		this.carriedEffect = carriedEffect;
 		this.carriedAmplifier = carriedAmplifier;
+	}
+
+	/** The lowercase name this legendary answers to on the command line. */
+	public String commandName() {
+		return name().toLowerCase(Locale.ROOT);
+	}
+
+	/**
+	 * Builds one, by assembling this legendary's own recipe.
+	 *
+	 * <p>Deliberately not built from components named in code. The recipe file is the single
+	 * definition of what a legendary is — its marker, its unbreakability, the spear's enchantments —
+	 * and a second copy here would be the one that drifts. {@code assemble} ignores its input for a
+	 * fixed result, so an empty crafting grid is enough to ask the recipe what it makes.
+	 *
+	 * <p>Empty if the recipe is missing, which means a datapack removed or overrode it. Callers say
+	 * so rather than substituting a bare item that would look like a legendary and obey none of the
+	 * rules.
+	 */
+	public ItemStack create(MinecraftServer server) {
+		ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, Identifier.parse(recipeId));
+		return server.getRecipeManager().byKey(key)
+				.map(RecipeHolder::value)
+				.filter(CraftingRecipe.class::isInstance)
+				.map(recipe -> ((CraftingRecipe) recipe).assemble(CraftingInput.EMPTY))
+				.orElse(ItemStack.EMPTY);
 	}
 
 	/** Key inside {@code minecraft:custom_data}. Must match this legendary's recipe result. */
