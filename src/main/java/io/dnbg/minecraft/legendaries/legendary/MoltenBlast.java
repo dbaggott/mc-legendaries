@@ -27,19 +27,19 @@ public final class MoltenBlast {
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
 	/**
-	 * The molten palette, one entry per weight — magma, netherrack and coal at 4 each, lava at 1.
-	 * A flat array is the weighting: picking a random index is the weighted draw, with no running
-	 * total to keep in step with the table.
+	 * The molten palette and its weights, in step.
 	 *
-	 * <p>4:4:4:1 rather than 3:3:3:1 because lava's weight was cut by a quarter, which is the same
-	 * ratio written in whole numbers. It takes lava from one shell block in ten to one in thirteen.
+	 * <p>13:13:13:1 puts lava at exactly one shell block in forty. That is a quarter of the rate it
+	 * started at — the first cut was 3:3:3:1, or one in ten — and the odd-looking 13 is what makes
+	 * the quarter exact rather than approximate.
+	 *
+	 * <p>Explicit weights rather than a flat array with one entry per weight: at these numbers that
+	 * array would be forty entries long, and a reader would have to count them to learn the odds.
 	 */
 	private static final Block[] MOLTEN = {
-		Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK, Blocks.MAGMA_BLOCK,
-		Blocks.NETHERRACK, Blocks.NETHERRACK, Blocks.NETHERRACK, Blocks.NETHERRACK,
-		Blocks.COAL_BLOCK, Blocks.COAL_BLOCK, Blocks.COAL_BLOCK, Blocks.COAL_BLOCK,
-		Blocks.LAVA,
+		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK, Blocks.LAVA,
 	};
+	private static final int[] MOLTEN_WEIGHTS = {13, 13, 13, 1};
 
 	private MoltenBlast() {
 	}
@@ -67,8 +67,25 @@ public final class MoltenBlast {
 			if (within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || !bordersCrater(centre, pos)) {
 				continue;
 			}
-			level.setBlock(pos, MOLTEN[random.nextInt(MOLTEN.length)].defaultBlockState(), BLOCK_UPDATE);
+			level.setBlock(pos, molten(random).defaultBlockState(), BLOCK_UPDATE);
 		}
+	}
+
+	/** A weighted draw from the palette. */
+	private static Block molten(RandomSource random) {
+		int total = 0;
+		for (int weight : MOLTEN_WEIGHTS) {
+			total += weight;
+		}
+		int roll = random.nextInt(total);
+		for (int i = 0; i < MOLTEN.length; i++) {
+			roll -= MOLTEN_WEIGHTS[i];
+			if (roll < 0) {
+				return MOLTEN[i];
+			}
+		}
+		// Unreachable: roll is bounded by the same total the loop subtracts.
+		return MOLTEN[0];
 	}
 
 	private static boolean within(BlockPos centre, BlockPos pos, int radius) {
