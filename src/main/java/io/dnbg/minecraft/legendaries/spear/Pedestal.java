@@ -103,10 +103,19 @@ public final class Pedestal {
 		if (ours(level, pos).size() == PEDESTAL_PARTS) {
 			return;
 		}
-		// A partial set means something was removed out from under us. Rebuild the whole thing
-		// rather than guess which piece is missing.
+		// A wrong-sized set means something was removed out from under us, or a duplicate was
+		// raised. Rebuild the whole thing rather than guess which piece is wrong — but carry the
+		// spear across first. The display holds the authoritative stack, so discarding it without
+		// reading it destroys the spear outright: the state would still say the spear is home,
+		// take() would refuse to correct it, place() would refuse to re-home it, and `crafted`
+		// would still block a replacement.
+		ItemStack held = heldStack(level, pos);
 		clearEntities(level, pos);
 		build(level, pos);
+		if (!held.isEmpty()) {
+			show(level, pos, held);
+			Legendaries.LOGGER.warn("Rebuilt the pedestal at {} and put the spear back on it", pos);
+		}
 		Legendaries.LOGGER.info("Pedestal standing at {}", pos);
 	}
 
@@ -123,6 +132,19 @@ public final class Pedestal {
 		ensure(server);
 		show(level, pos, spear.copy());
 		Legendaries.LOGGER.info("Netherite Spear returned to its pedestal at {}", pos);
+	}
+
+	/** What the pedestal's item display is holding, or empty if it is bare or unreadable. */
+	private static ItemStack heldStack(ServerLevel level, BlockPos pos) {
+		for (Entity entity : ours(level, pos)) {
+			if (entity instanceof Display.ItemDisplay display) {
+				ItemStack candidate = display.getSlot(0).get();
+				if (NetheriteSpear.is(candidate)) {
+					return candidate.copy();
+				}
+			}
+		}
+		return ItemStack.EMPTY;
 	}
 
 	/** Sets what the pedestal's item display is holding; an empty stack leaves it bare. */
@@ -176,15 +198,7 @@ public final class Pedestal {
 		}
 		BlockPos pos = position(server, state);
 		ServerLevel level = SpearState.home(server);
-		ItemStack held = ItemStack.EMPTY;
-		for (Entity entity : ours(level, pos)) {
-			if (entity instanceof Display.ItemDisplay display) {
-				ItemStack candidate = display.getSlot(0).get();
-				if (NetheriteSpear.is(candidate)) {
-					held = candidate.copy();
-				}
-			}
-		}
+		ItemStack held = heldStack(level, pos);
 		if (held.isEmpty()) {
 			// Nothing was recovered, which normally means the display's chunk has not loaded its
 			// entities yet rather than that the pedestal is empty. Leave the state exactly as it

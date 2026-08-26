@@ -91,7 +91,9 @@ public final class SpearCommand {
 		SpearState state = SpearState.get(source.getServer());
 		BlockPos pos = state.pedestalPos();
 		String where = pos == null
-				? "not sited yet; it will appear at world spawn the first time the spear needs it"
+				// Reachable only in the ticks before the pedestal is raised, which is why it
+				// describes a moment rather than a condition somebody can be left in.
+				? "not sited yet — the world has not finished starting"
 				: pos.toShortString() + (state.spearOnPedestal() ? " (spear is there)" : " (spear is out in the world)");
 		source.sendSuccess(() -> Component.literal("Pedestal: " + where), false);
 		return 1;

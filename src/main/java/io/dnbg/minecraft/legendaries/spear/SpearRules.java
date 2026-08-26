@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionResult;
@@ -87,7 +88,12 @@ public final class SpearRules {
 			}
 			ServerLevel home = SpearState.home(server);
 			BlockPos site = Pedestal.position(server, SpearState.get(server));
-			if (!home.isLoaded(site)) {
+			// areEntitiesLoaded, not isLoaded: the latter answers "is the chunk here", and the
+			// entity index arrives separately behind a future. In the gap between the two, a
+			// pedestal that is standing reads as absent, and ensure() would raise a second one
+			// beside it — which the stale sweep then keeps, because it keys on position and both
+			// sets are at the same position.
+			if (!home.areEntitiesLoaded(ChunkPos.pack(site))) {
 				return;
 			}
 			Pedestal.ensure(server);

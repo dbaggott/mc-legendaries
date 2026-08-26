@@ -20,8 +20,8 @@ import net.minecraft.world.level.saveddata.SavedDataType;
  * own spear — "one in the entire world" has to mean one across every dimension.
  *
  * <p>The pedestal position is <em>stored</em> rather than derived from world spawn. World spawn is
- * only where it is first placed; an admin can move it afterwards, and moving world spawn later
- * must not drag the pedestal along with it.
+ * only where it is sited on a world's first tick; an admin can move it afterwards, and moving world
+ * spawn later must not drag the pedestal along with it.
  */
 public class SpearState extends SavedData {
 	private static final Codec<SpearState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -64,7 +64,7 @@ public class SpearState extends SavedData {
 		setDirty();
 	}
 
-	/** Null until the spear has first needed somewhere to return to. */
+	/** Set when the pedestal is raised, on a world's first tick; null only before that. */
 	public BlockPos pedestalPos() {
 		return pedestalPos;
 	}
