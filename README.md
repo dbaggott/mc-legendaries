@@ -45,8 +45,9 @@ and handing it to another player all work normally.
 registers `netherite_spear` as fire-resistant. Anything that would genuinely
 destroy it — an explosion, a cactus, the void — or leaving it on the ground
 until it despawns puts it back on its **pedestal**: a non-collidable display
-entity that appears at world spawn the first time it is needed, and can be
-moved afterwards. Right-click the pedestal to take the spear back.
+entity that stands at world spawn from the moment a world is created, empty
+until the spear comes home, and can be moved afterwards. Right-click it to take
+the spear back.
 
 **Spears elsewhere.** No spear drops from any loot table any more, and no mob
 drops the one it was holding — mob equipment drops bypass loot tables entirely,

@@ -1,12 +1,15 @@
 package io.dnbg.minecraft.legendaries.spear;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionResult;
@@ -15,10 +18,14 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DecoratedPotBlock;
 import net.minecraft.world.level.block.ShelfBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * The rules that follow the spear around: what it grants, what it refuses, and what no longer
@@ -33,11 +40,15 @@ public final class SpearRules {
 	private static final int EFFECT_DURATION_TICKS = 40;
 	private static final int SPEED_II = 1;
 
+	/** Reset per session; the pedestal is raised once the site's chunk is genuinely loaded. */
+	private static boolean pedestalRaised;
+
 	private SpearRules() {
 	}
 
 	public static void register() {
 		stripSpearDrops();
+		raisePedestalOnce();
 		ServerEntityEvents.ENTITY_LOAD.register(Pedestal::discardStaleOnLoad);
 		grantSpeedWhileCarried();
 		wireEntityInteractions();
@@ -58,6 +69,30 @@ public final class SpearRules {
 				// can reach a drop, and stripping it here would have this mod destroying the one
 				// item everything else in it exists to keep.
 				stacks.removeIf(stack -> stack.is(ItemTags.SPEARS) && !NetheriteSpear.is(stack)));
+	}
+
+	/**
+	 * Raises the pedestal, once, as soon as its chunk is loaded.
+	 *
+	 * <p>Not on server-started: an entity in an unloaded chunk is not in the world's index, so
+	 * building at a moment the site is cold would find nothing standing and raise a second pedestal
+	 * beside the first. Waiting for {@code isLoaded} makes the "is one already here?" check mean
+	 * something.
+	 */
+	private static void raisePedestalOnce() {
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> pedestalRaised = false);
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			if (pedestalRaised) {
+				return;
+			}
+			ServerLevel home = SpearState.home(server);
+			BlockPos site = Pedestal.position(server, SpearState.get(server));
+			if (!home.isLoaded(site)) {
+				return;
+			}
+			Pedestal.ensure(server);
+			pedestalRaised = true;
+		});
 	}
 
 	private static void grantSpeedWhileCarried() {
@@ -126,16 +161,50 @@ public final class SpearRules {
 	 */
 	private static void refuseDirectPlacement() {
 		UseBlockCallback.EVENT.register((player, level, hand, hitResult) -> {
-			if (!NetheriteSpear.is(player.getItemInHand(hand))) {
+			BlockState state = level.getBlockState(hitResult.getBlockPos());
+			Block block = state.getBlock();
+			boolean refuse;
+			if (block instanceof ShelfBlock) {
+				refuse = shelfWouldTakeTheSpear(player, hand, state);
+			} else if (block instanceof DecoratedPotBlock) {
+				refuse = NetheriteSpear.is(player.getItemInHand(hand));
+			} else {
 				return InteractionResult.PASS;
 			}
-			var block = level.getBlockState(hitResult.getBlockPos()).getBlock();
-			if (!(block instanceof ShelfBlock) && !(block instanceof DecoratedPotBlock)) {
+			if (!refuse) {
 				return InteractionResult.PASS;
 			}
 			refuse(player, "The Netherite Spear will not be set down there.");
 			return InteractionResult.FAIL;
 		});
+	}
+
+	/**
+	 * A shelf moves different things depending on whether it is powered, and the held item is only
+	 * half the story.
+	 *
+	 * <p>Unpowered, {@code useItemOn} swaps the single item in hand. <strong>Powered, it calls
+	 * {@code swapHotbar} and exchanges the player's whole hotbar with the shelf</strong> — so the
+	 * spear travels even when the player is holding something else entirely, which is how it got
+	 * onto a shelf despite this rule already existing.
+	 *
+	 * <p>The two cases are kept apart rather than collapsed into "refuse whenever the spear is in
+	 * the hotbar", because that would stop a player using any shelf at all while carrying it.
+	 */
+	private static boolean shelfWouldTakeTheSpear(Player player, InteractionHand hand, BlockState state) {
+		if (NetheriteSpear.is(player.getItemInHand(hand))) {
+			return true;
+		}
+		if (!state.getValue(ShelfBlock.POWERED)) {
+			return false;
+		}
+		Inventory inventory = player.getInventory();
+		for (int slot = 0; slot < Inventory.SELECTION_SIZE; slot++) {
+			if (NetheriteSpear.is(inventory.getItem(slot))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static InteractionResult claimFromPedestal(Player player) {

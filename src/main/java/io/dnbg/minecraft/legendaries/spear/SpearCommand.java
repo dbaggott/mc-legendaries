@@ -75,6 +75,10 @@ public final class SpearCommand {
 		}
 
 		state.setPedestalPos(target);
+		// Raise the plinth at the new site whether or not the spear came with it — an empty
+		// pedestal is still a pedestal now, and a move that left nothing standing would be
+		// indistinguishable from the command having failed.
+		Pedestal.ensure(server);
 		if (!carried.isEmpty()) {
 			Pedestal.place(server, carried);
 		}
