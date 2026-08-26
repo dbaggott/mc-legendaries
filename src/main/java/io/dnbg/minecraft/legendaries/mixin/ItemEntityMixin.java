@@ -1,6 +1,6 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.ClaimTracked;
+import io.dnbg.minecraft.legendaries.legendary.ClaimTracked;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,11 +1,28 @@
 # Legendaries
 
 Adds **legendary** items to Minecraft: unique, one-per-world artifacts with their own crafting
-recipes, their own rules, and no other way to obtain them.
+recipes, their own rules, and no other way to obtain them. Two exist so far — the **Mace** and the
+**Netherite Spear**. Both are one per world, refused by every container, and returned to a shared
+pedestal rather than ever being lost.
 
 Install it on whichever side runs the world — your own game for single-player, or the server.
 **Other players need nothing.** The mod registers no custom item, block or data component, so a
 vanilla client can join a server running it and see only vanilla things.
+
+## The Mace
+
+Crafted by the ordinary vanilla recipe — a heavy core over a breeze rod. The ingredients and pattern
+are untouched; only the result is the legendary, so there is one mace per world and no plain ones.
+It is unbreakable.
+
+### Molten Blast
+
+**Sneak and right-click** to erase every block within five of you — all directions, including
+straight down — and turn the shell left behind into molten rock: magma, netherrack, coal or lava,
+weighted 3 / 3 / 3 / 1. Bedrock and anything else vanilla marks unbreakable survives, so a blast
+cannot hole the world floor or the Nether roof. Nothing drops. Sixty second cooldown.
+
+It is centred on you and does not care that you are standing there. Expect to fall.
 
 ## The Netherite Spear
 

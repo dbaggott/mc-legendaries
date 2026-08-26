@@ -1,6 +1,6 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.damagesource.DamageSource;
@@ -39,7 +39,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MobMixin {
 	@Inject(method = "canHoldItem", at = @At("HEAD"), cancellable = true)
 	private void legendaries$refuseTheSpear(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-		if (NetheriteSpear.is(stack)) {
+		if (Legendary.isAny(stack)) {
 			cir.setReturnValue(false);
 		}
 	}
@@ -50,7 +50,7 @@ public abstract class MobMixin {
 		Mob self = (Mob) (Object) this;
 		for (EquipmentSlot slot : EquipmentSlot.VALUES) {
 			ItemStack held = self.getItemBySlot(slot);
-			if (held.is(ItemTags.SPEARS) && !NetheriteSpear.is(held)) {
+			if (held.is(ItemTags.SPEARS) && !Legendary.isAny(held)) {
 				self.setItemSlot(slot, ItemStack.EMPTY);
 			}
 		}

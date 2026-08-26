@@ -1,6 +1,6 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -28,7 +28,7 @@ public abstract class HopperBlockEntityMixin {
 			at = @At("HEAD"), cancellable = true)
 	private static void legendaries$refuseSpearFromGround(Container container, ItemEntity itemEntity,
 			CallbackInfoReturnable<Boolean> cir) {
-		if (NetheriteSpear.is(itemEntity.getItem())) {
+		if (Legendary.isAny(itemEntity.getItem())) {
 			cir.setReturnValue(false);
 		}
 	}
@@ -39,7 +39,7 @@ public abstract class HopperBlockEntityMixin {
 			at = @At("HEAD"), cancellable = true)
 	private static void legendaries$refuseSpearBetweenContainers(Container source, Container destination,
 			ItemStack stack, Direction direction, CallbackInfoReturnable<ItemStack> cir) {
-		if (NetheriteSpear.is(stack)) {
+		if (Legendary.isAny(stack)) {
 			// Returning the stack unchanged is how this method says "nothing moved".
 			cir.setReturnValue(stack);
 		}

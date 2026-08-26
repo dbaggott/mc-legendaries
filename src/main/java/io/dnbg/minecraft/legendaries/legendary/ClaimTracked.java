@@ -1,4 +1,4 @@
-package io.dnbg.minecraft.legendaries.spear;
+package io.dnbg.minecraft.legendaries.legendary;
 
 /**
  * Implemented onto {@code ItemEntity} by a mixin, so the removal hook can ask an item entity

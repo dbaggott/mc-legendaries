@@ -1,7 +1,7 @@
 package io.dnbg.minecraft.legendaries;
 
-import io.dnbg.minecraft.legendaries.spear.SpearCommand;
-import io.dnbg.minecraft.legendaries.spear.SpearRules;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryCommand;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryRules;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
@@ -21,8 +21,8 @@ public class Legendaries implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		SpearRules.register();
-		SpearCommand.register();
+		LegendaryRules.register();
+		LegendaryCommand.register();
 		LOGGER.info("Loaded {}", MOD_ID);
 	}
 

@@ -1,8 +1,8 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
-import io.dnbg.minecraft.legendaries.spear.SpearRules;
-import io.dnbg.minecraft.legendaries.spear.SpearState;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryRules;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryState;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -35,7 +35,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class SlotMixin {
 	@Inject(method = "mayPlace", at = @At("HEAD"), cancellable = true)
 	private void legendaries$refuseSpearOutsidePlayerInventory(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
-		if (!NetheriteSpear.is(stack)) {
+		if (!Legendary.isAny(stack)) {
 			return;
 		}
 		Object container = ((Slot) (Object) this).container;
@@ -67,14 +67,15 @@ public abstract class SlotMixin {
 		if (!(self instanceof ResultSlot) || player.level().isClientSide()) {
 			return;
 		}
-		if (!NetheriteSpear.is(self.getItem())) {
+		Legendary legendary = Legendary.of(self.getItem()).orElse(null);
+		if (legendary == null) {
 			return;
 		}
 		MinecraftServer server = player.level().getServer();
-		if (server == null || !SpearState.get(server).crafted()) {
+		if (server == null || !LegendaryState.get(server).crafted(legendary)) {
 			return;
 		}
-		SpearRules.refuse(player, "The Netherite Spear has already been crafted.");
+		LegendaryRules.refuse(player, legendary.displayName() + " has already been crafted.");
 		cir.setReturnValue(false);
 	}
 }

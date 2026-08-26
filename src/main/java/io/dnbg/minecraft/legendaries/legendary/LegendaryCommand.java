@@ -1,4 +1,4 @@
-package io.dnbg.minecraft.legendaries.spear;
+package io.dnbg.minecraft.legendaries.legendary;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -9,6 +9,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -18,8 +20,8 @@ import net.minecraft.world.item.ItemStack;
  * initial siting; without a way to move it, that "stored" would be a distinction with no
  * difference.
  */
-public final class SpearCommand {
-	private SpearCommand() {
+public final class LegendaryCommand {
+	private LegendaryCommand() {
 	}
 
 	public static void register() {
@@ -44,7 +46,7 @@ public final class SpearCommand {
 
 	private static int move(CommandSourceStack source, BlockPos target) {
 		MinecraftServer server = source.getServer();
-		ServerLevel home = SpearState.home(server);
+		ServerLevel home = LegendaryState.home(server);
 		if (source.getLevel() != home) {
 			// The pedestal is always built in the overworld, so a position read from anywhere else is
 			// a set of coordinates from the wrong map — `here` in the Nether would site it eight times
@@ -53,34 +55,39 @@ public final class SpearCommand {
 			return 0;
 		}
 
-		SpearState state = SpearState.get(server);
+		LegendaryState state = LegendaryState.get(server);
 		BlockPos previous = state.pedestalPos();
 
-		// Take from the OLD site before repointing the state, then place at the new one. Doing it in
-		// this order is what stops a move from stranding the spear at a position nothing points at.
-		ItemStack carried = ItemStack.EMPTY;
-		if (state.spearOnPedestal()) {
-			carried = Pedestal.take(server);
-			if (carried.isEmpty()) {
-				// take() refused rather than handing over an empty pedestal, so the spear is still
+		// Take everything off the OLD site before repointing the state, then put it all back at the
+		// new one. Doing it in this order is what stops a move from stranding a legendary at a
+		// position nothing points at.
+		List<ItemStack> carried = new ArrayList<>();
+		while (!Pedestal.isEmpty(server)) {
+			ItemStack taken = Pedestal.takeOne(server);
+			if (taken.isEmpty()) {
+				// takeOne() refused rather than handing over an empty pedestal, so a legendary is still
 				// standing at the old site and the state still says so. Moving now would repoint the
-				// state away from a real spear and the next chunk load would destroy it.
+				// state away from it and the next chunk load would destroy it.
 				source.sendFailure(Component.literal(
-						"The spear's pedestal has not loaded yet. Go and look at it, then try again."));
+						"The pedestal has not loaded yet. Go and look at it, then try again."));
+				for (ItemStack back : carried) {
+					Pedestal.place(server, back);
+				}
 				return 0;
 			}
+			carried.add(taken);
 		}
 		if (previous != null) {
 			Pedestal.clearEntities(home, previous);
 		}
 
 		state.setPedestalPos(target);
-		// Raise the plinth at the new site whether or not the spear came with it — an empty
-		// pedestal is still a pedestal now, and a move that left nothing standing would be
-		// indistinguishable from the command having failed.
+		// Raise the plinth at the new site whether or not anything came with it — an empty pedestal is
+		// still a pedestal, and a move that left nothing standing would be indistinguishable from the
+		// command having failed.
 		Pedestal.ensure(server);
-		if (!carried.isEmpty()) {
-			Pedestal.place(server, carried);
+		for (ItemStack back : carried) {
+			Pedestal.place(server, back);
 		}
 
 		source.sendSuccess(() -> Component.literal("Pedestal moved to " + target.toShortString()), true);
@@ -88,13 +95,17 @@ public final class SpearCommand {
 	}
 
 	private static int report(CommandSourceStack source) {
-		SpearState state = SpearState.get(source.getServer());
+		LegendaryState state = LegendaryState.get(source.getServer());
 		BlockPos pos = state.pedestalPos();
-		String where = pos == null
-				// Reachable only in the ticks before the pedestal is raised, which is why it
-				// describes a moment rather than a condition somebody can be left in.
-				? "not sited yet — the world has not finished starting"
-				: pos.toShortString() + (state.spearOnPedestal() ? " (spear is there)" : " (spear is out in the world)");
+		String where;
+		if (pos == null) {
+			// Reachable only in the ticks before the pedestal is raised, which is why it describes a
+			// moment rather than a condition somebody can be left in.
+			where = "not sited yet — the world has not finished starting";
+		} else {
+			List<String> home = state.onPedestal().stream().map(Legendary::displayName).toList();
+			where = pos.toShortString() + (home.isEmpty() ? " (empty)" : " holding " + String.join(", ", home));
+		}
 		source.sendSuccess(() -> Component.literal("Pedestal: " + where), false);
 		return 1;
 	}

@@ -1,8 +1,8 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.ClaimTracked;
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
-import io.dnbg.minecraft.legendaries.spear.Pedestal;
+import io.dnbg.minecraft.legendaries.legendary.ClaimTracked;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
+import io.dnbg.minecraft.legendaries.legendary.Pedestal;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.SimpleContainer;
@@ -61,7 +61,7 @@ public abstract class EntityMixin {
 	@Unique
 	private static void legendaries$returnFromGround(MinecraftServer server, ItemEntity itemEntity) {
 		ItemStack stack = itemEntity.getItem();
-		if (!NetheriteSpear.is(stack)) {
+		if (!Legendary.isAny(stack)) {
 			return;
 		}
 		if (itemEntity instanceof ClaimTracked tracked && tracked.legendaries$wasClaimed()) {
@@ -87,7 +87,7 @@ public abstract class EntityMixin {
 	private static void legendaries$returnFromMob(MinecraftServer server, Mob mob) {
 		for (EquipmentSlot slot : EquipmentSlot.VALUES) {
 			ItemStack held = mob.getItemBySlot(slot);
-			if (NetheriteSpear.is(held)) {
+			if (Legendary.isAny(held)) {
 				mob.setItemSlot(slot, ItemStack.EMPTY);
 				Pedestal.place(server, held);
 				return;
@@ -99,7 +99,7 @@ public abstract class EntityMixin {
 		SimpleContainer inventory = carrier.getInventory();
 		for (int i = 0; i < inventory.getContainerSize(); i++) {
 			ItemStack held = inventory.getItem(i);
-			if (NetheriteSpear.is(held)) {
+			if (Legendary.isAny(held)) {
 				inventory.setItem(i, ItemStack.EMPTY);
 				Pedestal.place(server, held);
 				return;

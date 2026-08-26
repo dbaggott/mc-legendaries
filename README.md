@@ -7,7 +7,10 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own crafting recipes, their own rules, and no other way to
 obtain them.
 
-One legendary exists so far: the **Netherite Spear**.
+Two exist so far: the **Netherite Spear** and the **Mace**.
+
+Every legendary shares the same rules — one per world, refused by every container, and returned to
+a shared pedestal rather than ever being lost. What differs is how you get it and what it does.
 
 The mod is **common**, not client-only — every rule it adds is decided on the
 logical server, so it installs on a dedicated server and vanilla clients can
@@ -56,6 +59,24 @@ vanilla spear AI is untouched. Mobs are refused the legendary spear, and if one
 gets hold of it regardless it returns to the pedestal when that mob dies or
 despawns rather than leaving with it.
 
+## The Mace
+
+Crafted by the ordinary vanilla recipe — a heavy core over a breeze rod. The recipe's ingredients
+and pattern are untouched; only its result is the legendary, so there is one mace per world and no
+plain ones. It is unbreakable.
+
+### Molten Blast
+
+**Sneak and right-click** to erase every block within five of you — in all directions, including
+straight down — and turn the shell left behind into molten rock: magma, netherrack, coal or lava,
+weighted 3 / 3 / 3 / 1.
+
+Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
+or the Nether roof. Nothing drops; a sphere that size would bury you in items. **60 second
+cooldown**, shown on the item.
+
+It is centred on you and it does not care that you are standing there. Expect to fall.
+
 ## Admin
 
 ```
@@ -64,7 +85,10 @@ despawns rather than leaving with it.
 /legendaries pedestal at <x y z> # move it to a specific block
 ```
 
-Requires permission level 2. Moving an occupied pedestal carries the spear.
+Requires permission level 2. Moving an occupied pedestal carries whatever is on it.
+
+Both legendaries share one pedestal, each in its own slot. Right-clicking takes one at random from
+whatever is standing there.
 
 ## Installing
 

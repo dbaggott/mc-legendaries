@@ -1,6 +1,6 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
-import io.dnbg.minecraft.legendaries.spear.NetheriteSpear;
+import io.dnbg.minecraft.legendaries.legendary.Legendary;
 import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.crafting.CraftingInput;
@@ -37,7 +37,7 @@ public abstract class CrafterBlockMixin {
 		if (found.isEmpty()) {
 			return;
 		}
-		if (NetheriteSpear.is(found.get().value().assemble(input))) {
+		if (Legendary.isAny(found.get().value().assemble(input))) {
 			cir.setReturnValue(Optional.empty());
 		}
 	}
