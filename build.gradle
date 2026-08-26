@@ -1,6 +1,7 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
+	id 'me.modmuss50.mod-publish-plugin' version '2.1.1'
 }
 
 version = project.mod_version
@@ -67,7 +68,75 @@ publishing {
 	}
 }
 
-// Modrinth/GitHub release publishing is deliberately absent: the
-// mod-publish-plugin's `projectId` is Modrinth's immutable handle, which only
-// exists once the project has been created there. It arrives with the first
-// release, alongside .modrinth/ and a release workflow.
+// Publishes the remapped mod jar to Modrinth and as a GitHub Release.
+// Trigger with:
+//   MODRINTH_API_KEY=… GITHUB_TOKEN=$(gh auth token) ./gradlew publishMods
+// Or scope to one platform: publishModrinth / publishGithub.
+
+// Per-version changelog file lives at .modrinth/changelogs/${mod_version}.md
+// and the publish reads it lazily. See .modrinth/changelogs/README.md for
+// the convention. A fail-fast guard below errors at publish time if the
+// file doesn't exist for the current version.
+def changelogPath = ".modrinth/changelogs/${project.mod_version}.md"
+def changelogFile = layout.projectDirectory.file(changelogPath)
+
+publishMods {
+	// Use the standard `jar` task's output. In modern Loom the `jar` task produces
+	// the remapped production jar directly (there is no separate `remapJar` task),
+	// so the `file = remapJar.archiveFile` that most Fabric guides show would fail
+	// to resolve here. `archiveFile` is a lazy provider, read at execution time.
+	file = project.tasks.jar.archiveFile
+	// Custom lazy Provider rather than providers.fileContents(...).asText so we
+	// control the error path: a missing file would otherwise surface as
+	// "platform.changelog doesn't have a configured value" from inside the
+	// publish plugin, which doesn't point at the real problem.
+	changelog = provider {
+		if (!changelogFile.asFile.exists()) {
+			throw new GradleException(
+				"Changelog file ${changelogPath} not found. Create one before publishing v${project.mod_version}."
+			)
+		}
+		changelogFile.asFile.text
+	}
+	// STABLE rather than BETA even at 0.x: the first release will be 1.0.0, so
+	// there is no 0.x line for players to be warned about. Bumping mod_version
+	// straight to 1.0.0 is the release, not a separate cut-over.
+	type = STABLE
+	modLoaders.add("fabric")
+
+	modrinth {
+		projectId = providers.gradleProperty('modrinth_project_id').getOrElse('PLACEHOLDER_SET_ME')
+		accessToken = providers.environmentVariable("MODRINTH_API_KEY")
+		// Stable MC releases only — deliberately narrower than what the jar can
+		// load on. fabric.mod.json admits the whole 26.3 line (snapshots
+		// included), but `type = STABLE` above makes every row here a support
+		// claim, and a snapshot claim expires the week Mojang ships the next
+		// one. Add "26.3" here when 26.3 leaves snapshot; the already-published
+		// jar runs on it unchanged, so that is a metadata edit, not a release.
+		//
+		// 26.1.1 is claimed without a CI row of its own: it sits inside the
+		// range the floor (26.1) and 26.1.2 rows bracket, and every class this
+		// mod touches is byte-identical across both.
+		minecraftVersions.add("26.1")
+		minecraftVersions.add("26.1.1")
+		minecraftVersions.add("26.1.2")
+		minecraftVersions.add("26.2")
+		// Required wherever the world runs — a dedicated server, or your own
+		// game in single-player. Optional on a client joining somebody else's
+		// server, where a vanilla client sees everything this mod does.
+		environment = SERVER_ONLY_CLIENT_OPTIONAL
+		requires {
+			slug = "fabric-api"
+		}
+	}
+
+	github {
+		repository = "dbaggott/mc-legendaries"
+		accessToken = providers.environmentVariable("GITHUB_TOKEN")
+		// Pin the release/tag to the actual commit being built. On a
+		// workflow_dispatch from a branch, GITHUB_SHA is that branch's HEAD;
+		// hardcoding "main" would cut the release against main instead.
+		commitish = providers.environmentVariable("GITHUB_SHA").orElse("main")
+		tagName = "v${project.mod_version}"
+	}
+}

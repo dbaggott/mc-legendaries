@@ -1,0 +1,27 @@
+{
+  "title": "re legendaries",
+  "slug": "re-legendaries",
+
+  "description": "Unique, one-per-world legendary items. The first is a Netherite Spear that cannot be duplicated, stashed, or lost.",
+
+  "source_url": "https://github.com/dbaggott/mc-legendaries",
+  "issues_url": "https://github.com/dbaggott/mc-legendaries/issues",
+
+  "license_id": "MIT",
+
+  "categories": [
+    "game-mechanics",
+    "equipment"
+  ],
+
+  "client_side": "optional",
+  "server_side": "required",
+
+  "donation_urls": [
+    {
+      "id": "ko-fi",
+      "platform": "Ko-fi",
+      "url": "https://ko-fi.com/dnbg000"
+    }
+  ]
+}
