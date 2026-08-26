@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Fox.class)
 public abstract class FoxMixin {
 	@Inject(method = "canHoldItem", at = @At("HEAD"), cancellable = true)
-	private void legendaries$refuseTheSpear(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+	private void legendaries$refuseLegendaries(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		if (Legendary.isAny(stack)) {
 			cir.setReturnValue(false);
 		}

@@ -18,17 +18,17 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * The loss backstop: the spear cannot be destroyed out of the world.
+ * The loss backstop: a legendary cannot be destroyed out of the world.
  *
  * <p>{@code setRemoved} is the single funnel every removal passes through, which is why the hook
  * is here rather than on the individual causes — despawning after five minutes on the ground,
  * falling into the void, being blown up, and {@code /kill} all arrive at the same place. It covers
- * two carriers: an item entity lying on the ground, and a mob that picked the spear up despite the
+ * two carriers: an item entity lying on the ground, and a mob that picked a legendary up despite the
  * refusals in {@code MobMixin} and {@code FoxMixin}.
  *
  * <p>What is deliberately NOT caught:
  * <ul>
- *   <li>A pickup, flagged by {@link ItemEntityMixin} — otherwise walking over the spear would
+ *   <li>A pickup, flagged by {@link ItemEntityMixin} — otherwise walking over one would
  *       send it home.
  *   <li>{@code UNLOADED_TO_CHUNK} and {@code CHANGED_DIMENSION}, which are bookkeeping. An item in
  *       an unloaded chunk is not lost, it is asleep.

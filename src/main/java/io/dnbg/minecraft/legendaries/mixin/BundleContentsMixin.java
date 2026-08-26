@@ -30,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(BundleContents.class)
 public abstract class BundleContentsMixin {
 	@Inject(method = "canItemBeInBundle", at = @At("HEAD"), cancellable = true)
-	private static void legendaries$refuseTheSpear(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+	private static void legendaries$refuseLegendaries(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		if (Legendary.isAny(stack)) {
 			cir.setReturnValue(false);
 		}

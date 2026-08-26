@@ -4,6 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.dnbg.minecraft.legendaries.Legendaries;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
@@ -50,12 +52,15 @@ public class LegendaryState extends SavedData {
 					.forGetter(state -> state.crafted),
 			BlockPos.CODEC.optionalFieldOf("pedestal").forGetter(state -> Optional.ofNullable(state.pedestalPos)),
 			LEGENDARY_SET.fieldOf("on_pedestal").orElseGet(() -> EnumSet.noneOf(Legendary.class))
-					.forGetter(state -> state.onPedestal))
+					.forGetter(state -> state.onPedestal),
+			Codec.unboundedMap(Codec.STRING, Codec.INT).fieldOf("settings").orElseGet(Map::of)
+					.forGetter(state -> state.settings))
 			.apply(instance, LegendaryState::new));
 
 	private static final SavedDataType<LegendaryState> TYPE = new SavedDataType<>(
 			Legendaries.id("legendaries"), LegendaryState::new, CODEC, DataFixTypes.LEVEL);
 
+	private final Map<String, Integer> settings = new HashMap<>();
 	private final Set<Legendary> crafted = EnumSet.noneOf(Legendary.class);
 	private final Set<Legendary> onPedestal = EnumSet.noneOf(Legendary.class);
 	private BlockPos pedestalPos;
@@ -63,10 +68,32 @@ public class LegendaryState extends SavedData {
 	public LegendaryState() {
 	}
 
-	private LegendaryState(Set<Legendary> crafted, Optional<BlockPos> pedestalPos, Set<Legendary> onPedestal) {
+	private LegendaryState(Set<Legendary> crafted, Optional<BlockPos> pedestalPos, Set<Legendary> onPedestal,
+			Map<String, Integer> settings) {
 		this.crafted.addAll(crafted);
 		this.onPedestal.addAll(onPedestal);
 		this.pedestalPos = pedestalPos.orElse(null);
+		this.settings.putAll(settings);
+	}
+
+	/**
+	 * Overridden ability settings, keyed {@code LEGENDARY.setting}.
+	 *
+	 * <p>A flat string-keyed map rather than a field per setting: these exist to be changed while
+	 * testing, and a new one should not need a codec change and a world-format migration. An entry
+	 * nothing recognises is simply never read.
+	 */
+	public int setting(Legendary legendary, LegendarySetting setting) {
+		return settings.getOrDefault(key(legendary, setting), setting.defaultValue());
+	}
+
+	public void setSetting(Legendary legendary, LegendarySetting setting, int value) {
+		settings.put(key(legendary, setting), value);
+		setDirty();
+	}
+
+	private static String key(Legendary legendary, LegendarySetting setting) {
+		return legendary.name() + "." + setting.commandName();
 	}
 
 	/** The overworld, which is where this state lives regardless of who is asking. */
@@ -104,7 +131,7 @@ public class LegendaryState extends SavedData {
 
 	/** Everything currently standing on the pedestal, in enum order. */
 	public Set<Legendary> onPedestal() {
-		return EnumSet.copyOf(onPedestal.isEmpty() ? EnumSet.noneOf(Legendary.class) : onPedestal);
+		return EnumSet.copyOf(onPedestal);
 	}
 
 	public void setOnPedestal(Legendary legendary, boolean present) {

@@ -2,6 +2,7 @@ package io.dnbg.minecraft.legendaries.legendary;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
@@ -14,16 +15,12 @@ import net.minecraft.world.level.block.state.BlockState;
  * behind is turned to molten rock.
  *
  * <p>Two passes over the same region, and the order is what makes the shell a shell. The first
- * erases everything within {@link #BLAST_RADIUS}; the second converts blocks just outside it that
+ * erases everything within the configured radius; the second converts blocks just outside it that
  * survived the first and touch the void it left. Doing both in one pass would let a block be
  * converted and then erased, leaving the crater edge ragged.
  */
 public final class MoltenBlast {
-	public static final int COOLDOWN_TICKS = 60 * 20;
-
-	private static final int BLAST_RADIUS = 4;
-	/** One block of reach past the crater, which is where the shell can be. */
-	private static final int SHELL_RADIUS = BLAST_RADIUS + 1;
+	private static final int TICKS_PER_SECOND = 20;
 	/** setBlock flag: update neighbours and notify clients, the ordinary "a block changed" set. */
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
@@ -37,8 +34,8 @@ public final class MoltenBlast {
 	 * <p>4:4:4:3 totals fifteen, putting leave-as-is at exactly three in fifteen — one shell block in
 	 * five keeps whatever it was made of, which is what stops the lining reading as a uniform coat.
 	 *
-	 * <p>Lava was among these and is not any more: it flowed out of the shell and kept going, so a
-	 * blast left a spreading mess rather than a crater.
+	 * <p>Nothing in this table may be a fluid. A fluid does not stay in the shell — it flows out of
+	 * the crater and keeps going, which turns a blast into a spreading mess.
 	 */
 	private static final Block[] SHELL = {
 		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK, null,
@@ -52,20 +49,29 @@ public final class MoltenBlast {
 	private MoltenBlast() {
 	}
 
+	/** How long the mace waits between blasts, in ticks — configurable for testing. */
+	public static int cooldownTicks(MinecraftServer server) {
+		return LegendaryState.get(server).setting(Legendary.MACE, LegendarySetting.COOLDOWN) * TICKS_PER_SECOND;
+	}
+
 	/** Fires the blast, centred on the player. */
 	public static void fire(ServerLevel level, Player player) {
+		MinecraftServer server = level.getServer();
+		int blastRadius = LegendaryState.get(server).setting(Legendary.MACE, LegendarySetting.RADIUS);
+		// One block of reach past the crater, which is where the shell can be.
+		int shellRadius = blastRadius + 1;
 		BlockPos centre = player.blockPosition();
 		RandomSource random = level.getRandom();
 		// Particles go out before the blocks change, so the burst reads as the cause of the crater
 		// rather than an afterthought once the ground has already gone.
-		announce(level, centre);
+		announce(level, centre, blastRadius);
 
 		// Pass one: erase the crater. No drops — even a radius-4 sphere is a couple of hundred
 		// blocks, and dropping them would bury the player in item entities and cost the server more
 		// than the blast itself.
-		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-BLAST_RADIUS, -BLAST_RADIUS, -BLAST_RADIUS),
-				centre.offset(BLAST_RADIUS, BLAST_RADIUS, BLAST_RADIUS))) {
-			if (!within(centre, pos, BLAST_RADIUS) || !destructible(level, pos)) {
+		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-blastRadius, -blastRadius, -blastRadius),
+				centre.offset(blastRadius, blastRadius, blastRadius))) {
+			if (!within(centre, pos, blastRadius) || !destructible(level, pos)) {
 				continue;
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), BLOCK_UPDATE);
@@ -73,9 +79,10 @@ public final class MoltenBlast {
 
 		// Pass two: melt the shell. Only blocks that were already there, are outside the crater, and
 		// touch it — so the crater gets a molten lining rather than the whole neighbourhood changing.
-		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-SHELL_RADIUS, -SHELL_RADIUS, -SHELL_RADIUS),
-				centre.offset(SHELL_RADIUS, SHELL_RADIUS, SHELL_RADIUS))) {
-			if (within(centre, pos, BLAST_RADIUS) || !destructible(level, pos) || !bordersCrater(centre, pos)) {
+		for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-shellRadius, -shellRadius, -shellRadius),
+				centre.offset(shellRadius, shellRadius, shellRadius))) {
+			if (within(centre, pos, blastRadius) || !destructible(level, pos)
+					|| !bordersCrater(centre, pos, blastRadius)) {
 				continue;
 			}
 			Block molten = shellOutcome(random);
@@ -100,15 +107,15 @@ public final class MoltenBlast {
 	 * {@code EXPLOSION} puffs are spread across the crater's width so the burst fills the volume the
 	 * blast is about to clear rather than sitting at one point.
 	 */
-	private static void announce(ServerLevel level, BlockPos centre) {
+	private static void announce(ServerLevel level, BlockPos centre, int blastRadius) {
 		double x = centre.getX() + 0.5;
 		double y = centre.getY() + 0.5;
 		double z = centre.getZ() + 0.5;
 		level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
 		level.sendParticles(ParticleTypes.EXPLOSION, x, y, z, EXPLOSION_PUFFS,
-				BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, 0.0);
+				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.0);
 		level.sendParticles(ParticleTypes.FLAME, x, y, z, EXPLOSION_PUFFS * 2,
-				BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, BLAST_RADIUS * 0.5, 0.05);
+				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.05);
 	}
 
 	/** A weighted draw from {@link #SHELL}; null means leave the block as it is. */
@@ -133,9 +140,9 @@ public final class MoltenBlast {
 	}
 
 	/** Whether this position touches the crater on one of its six faces. */
-	private static boolean bordersCrater(BlockPos centre, BlockPos pos) {
+	private static boolean bordersCrater(BlockPos centre, BlockPos pos, int blastRadius) {
 		for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.values()) {
-			if (within(centre, pos.relative(direction), BLAST_RADIUS)) {
+			if (within(centre, pos.relative(direction), blastRadius)) {
 				return true;
 			}
 		}

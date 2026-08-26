@@ -67,6 +67,11 @@ public enum Legendary {
 		this.carriedAmplifier = carriedAmplifier;
 	}
 
+	/** Whether this legendary has an ability whose cooldown and radius mean anything. */
+	public boolean hasAbility() {
+		return this == MACE;
+	}
+
 	/** The lowercase name this legendary answers to on the command line. */
 	public String commandName() {
 		return name().toLowerCase(Locale.ROOT);

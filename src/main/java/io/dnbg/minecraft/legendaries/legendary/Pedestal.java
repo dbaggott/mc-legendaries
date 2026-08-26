@@ -165,12 +165,13 @@ public final class Pedestal {
 					stack.copy()));
 			return;
 		}
-		// Mark it home BEFORE spawning anything. Spawning into a loaded chunk fires the entity-load
-		// event synchronously, and discardStaleOnLoad reads this state to decide what belongs — so
-		// setting it afterwards makes the display delete itself on creation, but only where the
-		// chunk happened to be warm.
-		state.setOnPedestal(legendary, true);
+		// Order matters twice here. ensure() runs first, while the state still describes the world as
+		// it is — marking the legendary home beforehand makes structureIntact count a display that
+		// has not spawned yet, so it never matches and every single return rebuilds the pedestal.
+		// But the mark must still land before the display spawns: spawning into a loaded chunk fires
+		// the entity-load event synchronously.
 		ensure(server);
+		state.setOnPedestal(legendary, true);
 		showSlot(level, pos, legendary, stack.copy());
 		Legendaries.LOGGER.info("{} returned to its pedestal at {}", legendary.displayName(), pos);
 	}

@@ -11,10 +11,11 @@ jobs:
     # same source against a different (MC, Fabric API) pair, so an accidental
     # use of a version-specific API fails here rather than in a player's log.
     #
-    # The range is claimable because spears and the Lunge enchantment — the
-    # vanilla surface this mod is built on — are present unchanged in all four:
-    # every line below ships the same seven spear recipes and the same
-    # data/minecraft/enchantment/lunge.json.
+    # The range is claimable because the vanilla surface this mod is built on is
+    # present unchanged in all four lines: the same seven spear recipes, the same
+    # data/minecraft/enchantment/lunge.json, and the same mace recipe over
+    # heavy_core and breeze_rod. Widening the range means re-checking all of
+    # that, not only the spears.
     #
     # The 26.1 row is the *floor* row: oldest supported MC paired with the exact
     # `fabric-api` minimum declared in fabric.mod.json.

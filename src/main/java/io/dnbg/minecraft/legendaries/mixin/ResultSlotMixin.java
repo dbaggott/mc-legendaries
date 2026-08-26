@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Records the one craft.
  *
- * <p>Taking the spear out of a crafting result is the only moment it comes into existence, and the
+ * <p>Taking a legendary out of a crafting result is the only moment it comes into existence, and the
  * only moment it is safe to record — {@code assemble} runs speculatively every time the grid
  * changes, so marking the world there would burn the craft on a preview.
  *

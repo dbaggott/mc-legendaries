@@ -1,5 +1,6 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -25,15 +26,19 @@ import java.util.List;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * {@code /legendaries pedestal} — where the spear comes home to.
+ * The operator's commands: {@code pedestal}, {@code item} and {@code config}.
  *
- * <p>Exists because the pedestal's position is stored rather than derived. World spawn is only its
- * initial siting; without a way to move it, that "stored" would be a distinction with no
- * difference.
+ * <p>{@code pedestal} exists because the pedestal's position is stored rather than derived — world
+ * spawn is only its initial siting, and without a way to move it that "stored" would be a
+ * distinction with no difference. {@code item} hands out and takes back legendaries, ignoring the
+ * one-per-world rule on purpose. {@code config} turns the ability knobs, so tuning a blast is a
+ * command and a swing rather than an edit, a rebuild and a relaunch.
  */
 public final class LegendaryCommand {
 	private static final DynamicCommandExceptionType UNKNOWN_LEGENDARY = new DynamicCommandExceptionType(
 			name -> Component.literal("No legendary called '" + name + "'"));
+	private static final DynamicCommandExceptionType UNKNOWN_SETTING = new DynamicCommandExceptionType(
+			name -> Component.literal("No setting called '" + name + "'"));
 
 	private LegendaryCommand() {
 	}
@@ -77,7 +82,22 @@ public final class LegendaryCommand {
 													return delete(context.getSource(),
 															EntityArgument.getPlayers(context, "players"),
 															legendary);
-												})))));
+												})))))
+				.then(Commands.literal("config")
+						.then(Commands.literal("get")
+								.then(legendaryArg()
+										.executes(context -> reportSettings(context.getSource(),
+												namedLegendary(context)))))
+						.then(Commands.literal("set")
+								.then(legendaryArg()
+										.then(Commands.argument("setting", StringArgumentType.word())
+												.suggests((context, builder) -> SharedSuggestionProvider.suggest(
+														Arrays.stream(LegendarySetting.values())
+																.map(LegendarySetting::commandName), builder))
+												.then(Commands.argument("value", IntegerArgumentType.integer())
+														.executes(context -> setSetting(context.getSource(),
+																namedLegendary(context), namedSetting(context),
+																IntegerArgumentType.getInteger(context, "value"))))))));
 	}
 
 	private static RequiredArgumentBuilder<CommandSourceStack, String> legendaryArg() {
@@ -141,6 +161,59 @@ public final class LegendaryCommand {
 		source.sendSuccess(() -> Component.literal(
 				"Removed " + total + " " + legendary.displayName() + " from " + players.size() + " player(s)"), true);
 		return total;
+	}
+
+	private static LegendarySetting namedSetting(CommandContext<CommandSourceStack> context)
+			throws CommandSyntaxException {
+		String name = StringArgumentType.getString(context, "setting");
+		for (LegendarySetting setting : LegendarySetting.values()) {
+			if (setting.commandName().equals(name)) {
+				return setting;
+			}
+		}
+		throw UNKNOWN_SETTING.create(name);
+	}
+
+	/** Lists every setting for one legendary, with the value actually in force. */
+	private static int reportSettings(CommandSourceStack source, Legendary legendary) {
+		if (!legendary.hasAbility()) {
+			source.sendFailure(Component.literal(legendary.displayName() + " has no ability to configure"));
+			return 0;
+		}
+		LegendaryState state = LegendaryState.get(source.getServer());
+		StringBuilder report = new StringBuilder(legendary.displayName() + ":");
+		for (LegendarySetting setting : LegendarySetting.values()) {
+			report.append("\n  ").append(setting.commandName()).append(" = ")
+					.append(state.setting(legendary, setting)).append(' ').append(setting.unit());
+		}
+		String text = report.toString();
+		source.sendSuccess(() -> Component.literal(text), false);
+		return 1;
+	}
+
+	/**
+	 * Changes one setting.
+	 *
+	 * <p>Bounds are the setting's own rather than the argument type's, so the message can say what
+	 * the limit is and why a value was refused. A cooldown already counting down is not cleared —
+	 * the new value applies from the next use, and {@code cooldown 0} plus one swing is the way to
+	 * clear one now.
+	 */
+	private static int setSetting(CommandSourceStack source, Legendary legendary, LegendarySetting setting,
+			int value) {
+		if (!legendary.hasAbility()) {
+			source.sendFailure(Component.literal(legendary.displayName() + " has no ability to configure"));
+			return 0;
+		}
+		if (value < setting.min() || value > setting.max()) {
+			source.sendFailure(Component.literal(setting.commandName() + " must be between "
+					+ setting.min() + " and " + setting.max() + " " + setting.unit()));
+			return 0;
+		}
+		LegendaryState.get(source.getServer()).setSetting(legendary, setting, value);
+		source.sendSuccess(() -> Component.literal(legendary.displayName() + " " + setting.commandName()
+				+ " set to " + value + " " + setting.unit()), true);
+		return value;
 	}
 
 	private static int move(CommandSourceStack source, BlockPos target) {

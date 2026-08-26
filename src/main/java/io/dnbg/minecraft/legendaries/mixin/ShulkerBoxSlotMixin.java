@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * {@code stack.getItem().canFitInsideContainerItems()} and never calls {@code super} — so an
  * injection on {@code Slot.mayPlace} is simply not on the path. That is the gap {@code SlotMixin}'s
  * own comment predicted in the abstract; a shulker box is the one place in vanilla where it is
- * reachable with the spear, because every other overriding slot filters by a type a spear is not.
+ * reachable with a legendary, because every other overriding slot filters by a type they are not.
  */
 @Mixin(ShulkerBoxSlot.class)
 public abstract class ShulkerBoxSlotMixin {
 	@Inject(method = "mayPlace", at = @At("HEAD"), cancellable = true)
-	private void legendaries$refuseTheSpear(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+	private void legendaries$refuseLegendaries(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		if (Legendary.isAny(stack)) {
 			cir.setReturnValue(false);
 		}

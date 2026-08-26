@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.ShelfBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * The rules that follow the spear around: what it grants, what it refuses, and what no longer
+ * The rules that follow a legendary around: what it grants, what it refuses, and what no longer
  * drops now that it exists.
  */
 public final class LegendaryRules {
@@ -39,7 +39,6 @@ public final class LegendaryRules {
 	 */
 	private static final int EFFECT_INTERVAL_TICKS = 20;
 	private static final int EFFECT_DURATION_TICKS = 40;
-	private static final int SPEED_II = 1;
 
 	/** Reset per session; the pedestal is raised once the site's chunk is genuinely loaded. */
 	private static boolean pedestalRaised;
@@ -176,7 +175,7 @@ public final class LegendaryRules {
 			Block block = state.getBlock();
 			boolean refuse;
 			if (block instanceof ShelfBlock) {
-				refuse = shelfWouldTakeTheSpear(player, hand, state);
+				refuse = shelfWouldTakeALegendary(player, hand, state);
 			} else if (block instanceof DecoratedPotBlock) {
 				refuse = Legendary.isAny(player.getItemInHand(hand));
 			} else {
@@ -202,7 +201,7 @@ public final class LegendaryRules {
 	 * <p>The two cases are kept apart rather than collapsed into "refuse whenever the spear is in
 	 * the hotbar", because that would stop a player using any shelf at all while carrying it.
 	 */
-	private static boolean shelfWouldTakeTheSpear(Player player, InteractionHand hand, BlockState state) {
+	private static boolean shelfWouldTakeALegendary(Player player, InteractionHand hand, BlockState state) {
 		if (Legendary.isAny(player.getItemInHand(hand))) {
 			return true;
 		}
@@ -240,9 +239,8 @@ public final class LegendaryRules {
 	/**
 	 * Sneak + right-click with the Mace fires a Molten Blast.
 	 *
-	 * <p>Sneak-gated rather than a plain right-click because the blast erases every block within
-	 * five of the player, including the ones under their feet — an accidental trigger is expensive
-	 * in a way a mis-swing is not. A keybind would read better still, but only for players who
+	 * <p>Sneak-gated rather than a plain right-click because the blast deletes the ground under the
+	 * player's feet — an accidental trigger is expensive in a way a mis-swing is not. A keybind would read better still, but only for players who
 	 * installed the mod; this works from a vanilla client.
 	 */
 	private static void wireMoltenBlast() {
@@ -256,7 +254,7 @@ public final class LegendaryRules {
 			}
 			if (level instanceof ServerLevel serverLevel) {
 				MoltenBlast.fire(serverLevel, player);
-				player.getCooldowns().addCooldown(held, MoltenBlast.COOLDOWN_TICKS);
+				player.getCooldowns().addCooldown(held, MoltenBlast.cooldownTicks(serverLevel.getServer()));
 			}
 			// SUCCESS on both sides so the client plays the swing rather than waiting on the server.
 			return InteractionResult.SUCCESS;

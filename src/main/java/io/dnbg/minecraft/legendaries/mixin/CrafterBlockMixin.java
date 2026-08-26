@@ -13,9 +13,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * A crafter cannot make the spear.
+ * A crafter cannot make a legendary.
  *
- * <p>Every other route to the spear runs through a {@code Slot} — which is where the one-craft gate
+ * <p>Every other route to a legendary runs through a {@code Slot} — which is where the one-craft gate
  * lives, recorded on {@code ResultSlot.onTake} and refused in {@code SlotMixin.mayPickup}. A
  * crafter block reaches the recipe without constructing one: {@code dispenseFrom} goes straight
  * from {@code getPotentialResults} to {@code assemble} to dispensing the stack. So the gate never
@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(CrafterBlock.class)
 public abstract class CrafterBlockMixin {
 	@Inject(method = "getPotentialResults", at = @At("RETURN"), cancellable = true)
-	private static void legendaries$refuseTheSpear(ServerLevel level, CraftingInput input,
+	private static void legendaries$refuseLegendaries(ServerLevel level, CraftingInput input,
 			CallbackInfoReturnable<Optional<RecipeHolder<CraftingRecipe>>> cir) {
 		Optional<RecipeHolder<CraftingRecipe>> found = cir.getReturnValue();
 		if (found.isEmpty()) {
