@@ -81,6 +81,10 @@ def changelogPath = ".modrinth/changelogs/${project.mod_version}.md"
 def changelogFile = layout.projectDirectory.file(changelogPath)
 
 publishMods {
+	// Use the standard `jar` task's output. In modern Loom the `jar` task produces
+	// the remapped production jar directly (there is no separate `remapJar` task),
+	// so the `file = remapJar.archiveFile` that most Fabric guides show would fail
+	// to resolve here. `archiveFile` is a lazy provider, read at execution time.
 	file = project.tasks.jar.archiveFile
 	// Custom lazy Provider rather than providers.fileContents(...).asText so we
 	// control the error path: a missing file would otherwise surface as
@@ -94,6 +98,9 @@ publishMods {
 		}
 		changelogFile.asFile.text
 	}
+	// STABLE rather than BETA even at 0.x: the first release will be 1.0.0, so
+	// there is no 0.x line for players to be warned about. Bumping mod_version
+	// straight to 1.0.0 is the release, not a separate cut-over.
 	type = STABLE
 	modLoaders.add("fabric")
 

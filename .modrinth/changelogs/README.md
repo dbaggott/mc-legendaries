@@ -2,7 +2,7 @@
 
 Each release version lands here as `<mod_version>.md`. The build wires
 `publishMods` to read this file as the changelog text Modrinth and GitHub
-Releases display for the version.
+Releases display for that version.
 
 ```
 .modrinth/changelogs/
@@ -19,8 +19,8 @@ end users — short paragraph or bullet list, no version-bump
 boilerplate. Example:
 
 ```markdown
-- New: target-entity HP shown when the crosshair lands on a player or mob.
-- Fix: armor row no longer overlaps the readout on tiny window sizes.
+- New: the Amethyst Crown, one per world, found rather than crafted.
+- Fix: the Netherite Spear can no longer be stashed in a powered shelf.
 - Internal: ported to Minecraft 26.3 (no behavior change).
 ```
 
