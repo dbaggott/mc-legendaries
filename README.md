@@ -144,6 +144,24 @@ mise install          # Temurin 25
 ./gradlew runServer   # dev dedicated server
 ```
 
+`runClient` compiles the current source itself, so `build` beforehand is redundant — reach for
+`build` when you want the jar.
+
+### Sharing one world across worktrees
+
+The dev run directory defaults to `run/` beside whatever you launched, so each worktree gets its own
+empty world and its own keybinds. To point every worktree on a machine at one directory, set an
+absolute path in **`~/.gradle/gradle.properties`** — a user-level file, so the path never reaches the
+repo:
+
+```
+legendaries_run_dir=/Users/you/mc-legendaries-run
+```
+
+A clone that sets nothing keeps the ordinary `run/`. Note that two run configurations cannot share
+the directory simultaneously: a client and a server both launched against it contend for the same
+world lock.
+
 ## Releasing
 
 Published to [Modrinth](https://modrinth.com/mod/re-legendaries) and GitHub Releases from one
