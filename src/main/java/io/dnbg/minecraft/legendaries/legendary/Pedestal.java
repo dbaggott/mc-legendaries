@@ -26,7 +26,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 /**
@@ -55,6 +57,10 @@ public final class Pedestal {
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
 	private static final double SEARCH_RADIUS = 3.0;
+
+	/** Ticks per quarter-turn of the legendaries on their pedestal; four make a revolution. */
+	private static final int SPIN_STEP_TICKS = 15;
+	private static final float QUARTER_TURN = (float) (Math.PI / 2.0);
 
 	private Pedestal() {
 	}
@@ -202,6 +208,50 @@ public final class Pedestal {
 		clearSlot(level, pos, legendary);
 		state.setOnPedestal(legendary, false);
 		return chosen;
+	}
+
+	/**
+	 * Turns the legendaries on their pedestal, a quarter of a turn at a time.
+	 *
+	 * <p>The server sets a target and the client walks to it, so this costs one packet per display
+	 * per {@link #SPIN_STEP_TICKS} rather than one per tick. Two things make that work, and both are
+	 * easy to get wrong:
+	 *
+	 * <p><strong>A quarter-turn, never more.</strong> The client slerps to the new rotation, and
+	 * slerp takes the short way round — so a half-turn is ambiguous and anything past it doubles
+	 * back. Four quarters is the largest step that always advances, and stepping through
+	 * {@code quarter % 4} keeps the angle exact however long the server has been up.
+	 *
+	 * <p><strong>The delay is written forced.</strong> {@code Display.onSyncedDataUpdated} restarts
+	 * the interpolation clock for that key alone — a changed rotation only marks the render state
+	 * dirty — and synched data drops a write that does not change the value. Writing the same zero
+	 * unforced would start the first leg of the spin and no other, leaving the legendaries parked at
+	 * ninety degrees.
+	 */
+	public static void spin(MinecraftServer server) {
+		if (server.getTickCount() % SPIN_STEP_TICKS != 0) {
+			return;
+		}
+		BlockPos pos = LegendaryState.get(server).pedestalPos();
+		if (pos == null) {
+			return;
+		}
+		ServerLevel level = LegendaryState.home(server);
+		// Asked before ours(), which loads the chunk to search it. Turning something nobody can see
+		// is not worth keeping the spawn chunk warm for.
+		if (!level.areEntitiesLoaded(ChunkPos.pack(pos))) {
+			return;
+		}
+		int quarter = (server.getTickCount() / SPIN_STEP_TICKS) % 4;
+		Quaternionf facing = new Quaternionf().rotateY(quarter * QUARTER_TURN);
+		for (Entity entity : ours(level, pos)) {
+			if (!(entity instanceof Display.ItemDisplay display)) {
+				continue;
+			}
+			display.getEntityData().set(DisplayTransformAccessor.interpolationDurationId(), SPIN_STEP_TICKS);
+			display.getEntityData().set(DisplayTransformAccessor.interpolationDelayId(), 0, true);
+			display.getEntityData().set(DisplayTransformAccessor.leftRotationId(), facing);
+		}
 	}
 
 	/** Whether anything at all is standing on the pedestal, without disturbing it. */
