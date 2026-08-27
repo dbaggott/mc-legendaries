@@ -2,13 +2,20 @@ package io.dnbg.minecraft.legendaries.legendary;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 /**
  * The Mace's ability: a sphere of the world around the player is annihilated, and the shell left
@@ -46,6 +53,32 @@ public final class MoltenBlast {
 	private static final int EXPLOSION_PUFFS = 40;
 	private static final int FLAMES_PER_SHELL_BLOCK = 2;
 
+	/**
+	 * What the blast does to anything caught in it: two and a half hearts, in health points.
+	 *
+	 * <p>Flat across the crater rather than falling off with distance. The blast erases the whole
+	 * sphere without regard to where in it a block was, and the damage reads as the same event.
+	 */
+	private static final float BLAST_DAMAGE = 5.0f;
+
+	/**
+	 * The damage this deals, defined in {@code data/legendaries/damage_type/molten_blast.json} and
+	 * added to {@code #minecraft:bypasses_armor} by a tag beside it.
+	 *
+	 * <p>A type of its own rather than {@code magic}, which is the vanilla type that bypasses armor,
+	 * because a type is also what names the death message and "was killed by magic" is not what
+	 * happened.
+	 *
+	 * <p><strong>Its {@code message_id} is deliberately a vanilla one.</strong> The id becomes the
+	 * translation key, and this mod is built so a vanilla client needs nothing installed — so a key
+	 * of our own would reach most players as the literal string
+	 * {@code death.attack.molten_blast}. {@code explosion} is the closest true one every client
+	 * already has. The borrowed id carries none of {@code explosion}'s behaviour: armor bypassing
+	 * comes from the tag, and vanilla explosion damage does not bypass armor at all.
+	 */
+	private static final ResourceKey<DamageType> MOLTEN_BLAST = ResourceKey.create(
+			Registries.DAMAGE_TYPE, Identifier.fromNamespaceAndPath("legendaries", "molten_blast"));
+
 	private MoltenBlast() {
 	}
 
@@ -65,6 +98,8 @@ public final class MoltenBlast {
 		// Particles go out before the blocks change, so the burst reads as the cause of the crater
 		// rather than an afterthought once the ground has already gone.
 		announce(level, centre, blastRadius);
+		// Before the ground goes, while everything caught in it is still standing where it was.
+		scorch(level, player, centre, blastRadius);
 
 		// Pass one: erase the crater. No drops — the sphere runs to hundreds of blocks and grows with
 		// the cube of the radius, so dropping them would bury the player in item entities and cost
@@ -93,6 +128,33 @@ public final class MoltenBlast {
 			// Flames on the face that looks into the crater, so the lining reads as freshly molten.
 			level.sendParticles(ParticleTypes.FLAME, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
 					FLAMES_PER_SHELL_BLOCK, 0.3, 0.3, 0.3, 0.01);
+		}
+	}
+
+	/**
+	 * Burns everything inside the crater, except the one who set it off.
+	 *
+	 * <p>The wielder is spared because the blast is centred on them: they are always inside their
+	 * own radius, so charging them for it would make every use cost two and a half hearts that no
+	 * armor could soften. Everything else living in the sphere takes the full amount.
+	 *
+	 * <p>Distance is measured from the entity's own position rather than the block it stands in,
+	 * because an entity is a point and a block is not — rounding to the block would spare something
+	 * standing just inside the edge and burn something just outside it.
+	 */
+	private static void scorch(ServerLevel level, Player player, BlockPos centre, int blastRadius) {
+		DamageSource source = new DamageSource(
+				level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(MOLTEN_BLAST), player);
+		double reachSqr = (double) blastRadius * blastRadius;
+		// The centre written out rather than asked for: BlockPos.getCenter() exists in 26.1 and was
+		// gone by 26.2, and this is the same arithmetic announce() already does.
+		double x = centre.getX() + 0.5;
+		double y = centre.getY() + 0.5;
+		double z = centre.getZ() + 0.5;
+		AABB caught = new AABB(centre).inflate(blastRadius);
+		for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, caught,
+				candidate -> candidate != player && candidate.distanceToSqr(x, y, z) <= reachSqr)) {
+			victim.hurtServer(level, source, BLAST_DAMAGE);
 		}
 	}
 
