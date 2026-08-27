@@ -127,8 +127,7 @@ together.
 rebuild and a relaunch. Values persist with the world, and `radius` is capped at 16 because cost
 grows with its cube. `cooldown` is measured from your last swing against whatever the setting says
 now, so a new value reaches a wait already counting down — shortening it past the time already
-elapsed ends that wait there and then, and lengthening it can put the ability back on cooldown after
-the old wait had run out.
+elapsed ends that wait there and then, and lengthening it extends the same wait.
 
 **`item give` ignores the one-per-world rule** — that is what it is for, whether you are recovering
 a legendary lost to something the backstop could not catch or testing a change. It does not mark the
