@@ -99,7 +99,7 @@ public final class MoltenBlast {
 	 * instead of falling silent between one tick and the next. Pitched under default for the same
 	 * reason the boom is: a big fire is a low one.
 	 */
-	private static final int SETTLE_BEATS = 4;
+	private static final int SETTLE_BEATS = 3;
 	private static final int SETTLE_TICKS_PER_BEAT = 6;
 	private static final int SETTLE_SOURCES_PER_BEAT = 4;
 	private static final float SETTLE_VOLUME = 3.0f;
