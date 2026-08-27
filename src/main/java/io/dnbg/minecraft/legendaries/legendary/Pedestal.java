@@ -2,11 +2,15 @@ package io.dnbg.minecraft.legendaries.legendary;
 
 import io.dnbg.minecraft.legendaries.Legendaries;
 import io.dnbg.minecraft.legendaries.mixin.BlockDisplayAccessor;
+import io.dnbg.minecraft.legendaries.mixin.DisplayTransformAccessor;
 import io.dnbg.minecraft.legendaries.mixin.InteractionAccessor;
+import io.dnbg.minecraft.legendaries.mixin.ItemDisplayAccessor;
+import io.dnbg.minecraft.legendaries.mixin.TextDisplayAccessor;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -16,11 +20,14 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Where the legendaries wait when nobody is carrying them.
@@ -47,10 +54,17 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
-	private static final double HOVER = 1.25;
-	private static final double SLOT_SPREAD = 0.4;
-	private static final float INTERACTION_SIZE = 1.5f;
+	/**
+	 * Marks which shape an entity was built to, so a pedestal already standing is rebuilt when the
+	 * shape changes rather than kept as it was. See {@link PlinthShape#FINGERPRINT}.
+	 */
+	private static final String SHAPE_TAG = "legendaries_shape_" + PlinthShape.FINGERPRINT;
+
 	private static final double SEARCH_RADIUS = 3.0;
+
+	/** Ticks per quarter-turn of the legendaries on their pedestal; four make a revolution. */
+	private static final int SPIN_STEP_TICKS = 15;
+	private static final float QUARTER_TURN = (float) (Math.PI / 2.0);
 
 	private Pedestal() {
 	}
@@ -128,12 +142,23 @@ public final class Pedestal {
 		Legendaries.LOGGER.info("Pedestal standing at {}", pos);
 	}
 
-	/** Whether the plinth, the click target and exactly the expected item displays are all present. */
+	/**
+	 * Whether the plinth, the click target and exactly the expected item displays are all present,
+	 * and all built to the shape this version draws.
+	 *
+	 * <p><strong>The shape tag is what makes a change reach a world that already has a pedestal.</strong>
+	 * Counting alone only notices a tier being added or removed; a different block, a different
+	 * scale or a resized click target leaves the count untouched, so the old pedestal stood
+	 * unchanged and the change reached only worlds that had never seen one.
+	 */
 	private static boolean structureIntact(ServerLevel level, BlockPos pos, LegendaryState state) {
 		int plinths = 0;
 		int targets = 0;
 		int displays = 0;
 		for (Entity entity : ours(level, pos)) {
+			if (!entity.entityTags().contains(SHAPE_TAG)) {
+				return false;
+			}
 			if (entity instanceof Display.BlockDisplay) {
 				plinths++;
 			} else if (entity instanceof Interaction) {
@@ -142,7 +167,7 @@ public final class Pedestal {
 				displays++;
 			}
 		}
-		return plinths == 1 && targets == 1 && displays == state.onPedestal().size();
+		return plinths == PlinthShape.LIVE.length && targets == 1 && displays == state.onPedestal().size();
 	}
 
 	/** Puts a legendary on the pedestal, building it first if it somehow is not there. */
@@ -200,6 +225,50 @@ public final class Pedestal {
 		return chosen;
 	}
 
+	/**
+	 * Turns the legendaries on their pedestal, a quarter of a turn at a time.
+	 *
+	 * <p>The server sets a target and the client walks to it, so this costs one packet per display
+	 * per {@link #SPIN_STEP_TICKS} rather than one per tick. Two things make that work, and both are
+	 * easy to get wrong:
+	 *
+	 * <p><strong>A quarter-turn, never more.</strong> The client slerps to the new rotation, and
+	 * slerp takes the short way round — so a half-turn is ambiguous and anything past it doubles
+	 * back. Four quarters is the largest step that always advances, and stepping through
+	 * {@code quarter % 4} keeps the angle exact however long the server has been up.
+	 *
+	 * <p><strong>The delay is written forced.</strong> {@code Display.onSyncedDataUpdated} restarts
+	 * the interpolation clock for that key alone — a changed rotation only marks the render state
+	 * dirty — and synched data drops a write that does not change the value. Writing the same zero
+	 * unforced would start the first leg of the spin and no other, leaving the legendaries parked at
+	 * ninety degrees.
+	 */
+	public static void spin(MinecraftServer server) {
+		if (server.getTickCount() % SPIN_STEP_TICKS != 0) {
+			return;
+		}
+		BlockPos pos = LegendaryState.get(server).pedestalPos();
+		if (pos == null) {
+			return;
+		}
+		ServerLevel level = LegendaryState.home(server);
+		// Asked before ours(), which loads the chunk to search it. Turning something nobody can see
+		// is not worth keeping the spawn chunk warm for.
+		if (!level.areEntitiesLoaded(ChunkPos.pack(pos))) {
+			return;
+		}
+		int quarter = (server.getTickCount() / SPIN_STEP_TICKS) % 4;
+		Quaternionf facing = new Quaternionf().rotateY(quarter * QUARTER_TURN);
+		for (Entity entity : ours(level, pos)) {
+			if (!(entity instanceof Display.ItemDisplay display)) {
+				continue;
+			}
+			display.getEntityData().set(DisplayTransformAccessor.interpolationDurationId(), SPIN_STEP_TICKS);
+			display.getEntityData().set(DisplayTransformAccessor.interpolationDelayId(), 0, true);
+			display.getEntityData().set(DisplayTransformAccessor.leftRotationId(), facing);
+		}
+	}
+
 	/** Whether anything at all is standing on the pedestal, without disturbing it. */
 	public static boolean isEmpty(MinecraftServer server) {
 		LegendaryState state = LegendaryState.get(server);
@@ -214,10 +283,21 @@ public final class Pedestal {
 			return;
 		}
 		// Slots are spread along X by enum order so two legendaries do not occupy the same point.
-		double offset = (legendary.ordinal() - (Legendary.values().length - 1) / 2.0) * SLOT_SPREAD;
-		shown.snapTo(pos.getX() + 0.5 + offset, pos.getY() + HOVER, pos.getZ() + 0.5, 0.0f, 0.0f);
+		// The width of a slot comes from the case, so however many legendaries there are they are
+		// laid out inside the glass rather than spilling out of it.
+		int slots = Legendary.values().length;
+		double offset = (legendary.ordinal() - (slots - 1) / 2.0) * PlinthShape.slotWidth(slots);
+		shown.snapTo(pos.getX() + 0.5 + offset, pos.getY() + PlinthShape.CASE_CENTRE_Y, pos.getZ() + 0.5,
+				0.0f, 0.0f);
+		// Rendered exactly as a dropped item is. GROUND is the model's own transform for lying on
+		// the floor, so the legendary in the case is the shape players already know, at the size the
+		// model itself specifies — rather than a held item scaled by a number somebody guessed.
+		shown.getEntityData().set(ItemDisplayAccessor.itemDisplayId(), ItemDisplayContext.GROUND.getId());
+		float scale = PlinthShape.itemScale(slots);
+		shown.getEntityData().set(DisplayTransformAccessor.scaleId(), new Vector3f(scale, scale, scale));
 		shown.getSlot(0).set(stack);
 		shown.addTag(TAG);
+		shown.addTag(SHAPE_TAG);
 		shown.addTag(SLOT_TAG_PREFIX + legendary.name());
 		level.addFreshEntity(shown);
 	}
@@ -245,23 +325,69 @@ public final class Pedestal {
 	}
 
 	private static void buildFixtures(ServerLevel level, BlockPos pos) {
-		Display.BlockDisplay plinth = Pedestal.<Display.BlockDisplay>type("block_display")
-				.create(level, EntitySpawnReason.COMMAND);
-		if (plinth != null) {
-			plinth.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			plinth.getEntityData().set(BlockDisplayAccessor.blockStateId(), Blocks.LODESTONE.defaultBlockState());
-			plinth.addTag(TAG);
-			level.addFreshEntity(plinth);
-		}
+		buildTiers(level, pos, PlinthShape.LIVE, TAG, SHAPE_TAG);
 
 		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
 		if (click != null) {
-			click.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			click.getEntityData().set(InteractionAccessor.widthId(), INTERACTION_SIZE);
-			click.getEntityData().set(InteractionAccessor.heightId(), INTERACTION_SIZE);
+			// The case alone answers a right-click: it is the thing with a legendary visibly inside
+			// it, and the plinth holding it up is scenery. An Interaction grows upward from its
+			// position, so it starts at the case's underside and is exactly the glass.
+			click.snapTo(pos.getX() + 0.5, pos.getY() + PlinthShape.CASE_BOTTOM_Y, pos.getZ() + 0.5,
+					0.0f, 0.0f);
+			click.getEntityData().set(InteractionAccessor.widthId(), PlinthShape.CASE_SIZE);
+			click.getEntityData().set(InteractionAccessor.heightId(), PlinthShape.CASE_SIZE);
 			click.addTag(TAG);
+			click.addTag(SHAPE_TAG);
 			level.addFreshEntity(click);
 		}
+	}
+
+	/**
+	 * Spawns one plinth's worth of block displays, carrying exactly the tags the caller asks for.
+	 *
+	 * <p>The caller supplies every tag, including {@link #TAG}. Adding that here would mean preview
+	 * plinths wore the real pedestal's tag, and {@link #discardStaleOnLoad} would delete them the
+	 * instant they spawned for standing somewhere the pedestal is not — which is that method doing
+	 * its job, on the wrong entities.
+	 */
+	public static void buildTiers(ServerLevel level, BlockPos pos, PlinthShape.Tier[] tiers, String... tags) {
+		for (PlinthShape.Tier tier : tiers) {
+			Display.BlockDisplay part = Pedestal.<Display.BlockDisplay>type("block_display")
+					.create(level, EntitySpawnReason.COMMAND);
+			if (part == null) {
+				continue;
+			}
+			// Every tier sits at the same entity position; scale and translation give it its size
+			// and its height in the stack. Translation is applied in the display's own space, so
+			// halving the scale halves what a unit of translation moves.
+			part.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+			part.getEntityData().set(BlockDisplayAccessor.blockStateId(), tier.block().defaultBlockState());
+			part.getEntityData().set(DisplayTransformAccessor.scaleId(),
+					new Vector3f(tier.scaleX(), tier.scaleY(), tier.scaleZ()));
+			// A block model grows from its own origin, so horizontal centring costs half its scaled
+			// width — and the vertical offset is simply where its underside goes.
+			part.getEntityData().set(DisplayTransformAccessor.translationId(),
+					new Vector3f(-tier.scaleX() / 2.0f, tier.bottomY(), -tier.scaleZ() / 2.0f));
+			for (String tag : tags) {
+				part.addTag(tag);
+			}
+			level.addFreshEntity(part);
+		}
+	}
+
+	/** Floats a line of text above a position, so a row of preview plinths can be told apart. */
+	public static void label(ServerLevel level, BlockPos pos, String text, String... tags) {
+		Display.TextDisplay label = Pedestal.<Display.TextDisplay>type("text_display")
+				.create(level, EntitySpawnReason.COMMAND);
+		if (label == null) {
+			return;
+		}
+		label.snapTo(pos.getX() + 0.5, pos.getY() + 2.4, pos.getZ() + 0.5, 0.0f, 0.0f);
+		label.getEntityData().set(TextDisplayAccessor.textId(), Component.literal(text));
+		for (String tag : tags) {
+			label.addTag(tag);
+		}
+		level.addFreshEntity(label);
 	}
 
 	/** Removes the pedestal's entities without touching the state's record of where it is. */

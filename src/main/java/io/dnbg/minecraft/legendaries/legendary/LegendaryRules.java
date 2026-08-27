@@ -50,6 +50,7 @@ public final class LegendaryRules {
 		stripSpearDrops();
 		raisePedestalOnce();
 		ServerEntityEvents.ENTITY_LOAD.register(Pedestal::discardStaleOnLoad);
+		spinPedestal();
 		grantCarriedEffects();
 		wireMoltenBlast();
 		wireEntityInteractions();
@@ -99,6 +100,11 @@ public final class LegendaryRules {
 			Pedestal.ensure(server);
 			pedestalRaised = true;
 		});
+	}
+
+	/** Keeps the legendaries turning on their pedestal. */
+	private static void spinPedestal() {
+		ServerTickEvents.END_SERVER_TICK.register(Pedestal::spin);
 	}
 
 	private static void grantCarriedEffects() {

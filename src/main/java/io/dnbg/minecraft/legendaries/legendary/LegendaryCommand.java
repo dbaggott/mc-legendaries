@@ -17,6 +17,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import java.util.ArrayList;
@@ -83,6 +85,11 @@ public final class LegendaryCommand {
 															EntityArgument.getPlayers(context, "players"),
 															legendary);
 												})))))
+				.then(Commands.literal("debug")
+						.then(Commands.literal("plinths")
+								.executes(context -> showPlinths(context.getSource())))
+						.then(Commands.literal("clear")
+								.executes(context -> clearPlinths(context.getSource()))))
 				.then(Commands.literal("config")
 						.then(Commands.literal("get")
 								.then(legendaryArg()
@@ -160,6 +167,47 @@ public final class LegendaryCommand {
 		int total = removed;
 		source.sendSuccess(() -> Component.literal(
 				"Removed " + total + " " + legendary.displayName() + " from " + players.size() + " player(s)"), true);
+		return total;
+	}
+
+	/** Tag on every preview plinth, so clearing them cannot touch the real one. */
+	private static final String PREVIEW_TAG = "legendaries_preview";
+	private static final int PREVIEW_SPACING = 3;
+
+	/**
+	 * Builds every candidate plinth in a row beside the caller, each under its own label.
+	 *
+	 * <p>Shapes are judged by looking, and looking at one per rebuild is slow. A row of them in one
+	 * screenshot collapses a morning of round trips into a single answer, and the labels are what
+	 * make that answer sayable — counting unlabelled plinths left to right is how the wrong one
+	 * gets picked.
+	 */
+	private static int showPlinths(CommandSourceStack source) {
+		ServerLevel level = source.getLevel();
+		BlockPos origin = BlockPos.containing(source.getPosition());
+		clearPlinths(source);
+		int i = 0;
+		for (PlinthShape.Variant variant : PlinthShape.VARIANTS) {
+			BlockPos at = origin.offset(i * PREVIEW_SPACING, 0, 0);
+			Pedestal.buildTiers(level, at, variant.tiers(), PREVIEW_TAG);
+			Pedestal.label(level, at, variant.label(), PREVIEW_TAG);
+			i++;
+		}
+		int built = i;
+		source.sendSuccess(() -> Component.literal("Built " + built + " plinths running east from here"), false);
+		return built;
+	}
+
+	private static int clearPlinths(CommandSourceStack source) {
+		int removed = 0;
+		for (Entity entity : source.getLevel().getEntities((Entity) null,
+				new AABB(BlockPos.containing(source.getPosition())).inflate(64.0),
+				e -> e.entityTags().contains(PREVIEW_TAG))) {
+			entity.discard();
+			removed++;
+		}
+		int total = removed;
+		source.sendSuccess(() -> Component.literal("Removed " + total + " preview entities"), false);
 		return total;
 	}
 

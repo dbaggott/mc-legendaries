@@ -47,10 +47,17 @@ and handing it to another player all work normally.
 **Losing it.** You cannot. It is fire- and lava-immune already, because vanilla
 registers `netherite_spear` as fire-resistant. Anything that would genuinely
 destroy it — an explosion, a cactus, the void — or leaving it on the ground
-until it despawns puts it back on its **pedestal**: a non-collidable display
-entity that stands at world spawn from the moment a world is created, empty
-until the spear comes home, and can be moved afterwards. Right-click it to take
-the spear back.
+until it despawns puts it back on its **pedestal**: a non-collidable stone
+plinth that stands at world spawn from the moment a world is created, empty
+until something comes home, and can be moved afterwards. Right-click the glass to
+take one back.
+
+A purple glass case sits on top, narrower than the cap so it reads as set down
+there, and whatever the pedestal is holding turns slowly inside it, rendered with
+the item's own dropped-item model.
+
+The plinth is display entities rather than placed blocks, so there is nothing to
+mine, nothing to grief and nothing to walk into.
 
 **Spears elsewhere.** No spear drops from any loot table any more, and no mob
 drops the one it was holding — mob equipment drops bypass loot tables entirely,
@@ -99,6 +106,15 @@ It is centred on you and it does not care that you are standing there. Expect to
 ```
 
 `<name>` is `netherite_spear` or `mace`, tab-completed; so is `<setting>`.
+
+```
+/legendaries debug plinths                # build every candidate plinth shape in a labelled row
+/legendaries debug clear                  # remove them
+```
+
+Shapes are judged by looking, and looking at one per rebuild is slow. `debug plinths` puts every
+candidate in the world at once, each under its own label, so one screenshot settles which to keep.
+The candidates live in `PlinthShape.VARIANTS`; the one in use is `PlinthShape.LIVE`.
 
 **`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
 rebuild and a relaunch. Values persist with the world, `radius` is capped at 16 because cost grows

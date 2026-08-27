@@ -6,15 +6,18 @@
     "BlockDisplayAccessor",
     "BundleContentsMixin",
     "CrafterBlockMixin",
+    "DisplayTransformAccessor",
     "EntityMixin",
     "FoxMixin",
     "HopperBlockEntityMixin",
     "InteractionAccessor",
+    "ItemDisplayAccessor",
     "ItemEntityMixin",
     "MobMixin",
     "ResultSlotMixin",
     "ShulkerBoxSlotMixin",
-    "SlotMixin"
+    "SlotMixin",
+    "TextDisplayAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
