@@ -54,7 +54,6 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
-	private static final float INTERACTION_SIZE = 1.6f;
 	private static final double SEARCH_RADIUS = 3.0;
 
 	private Pedestal() {
@@ -265,8 +264,10 @@ public final class Pedestal {
 		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
 		if (click != null) {
 			click.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			click.getEntityData().set(InteractionAccessor.widthId(), INTERACTION_SIZE);
-			click.getEntityData().set(InteractionAccessor.heightId(), INTERACTION_SIZE);
+			// Sized from the plinth, so the whole of it is clickable — the case and the legendary
+			// standing in it included, which is what a player actually aims at.
+			click.getEntityData().set(InteractionAccessor.widthId(), PlinthShape.WIDTH);
+			click.getEntityData().set(InteractionAccessor.heightId(), PlinthShape.HEIGHT);
 			click.addTag(TAG);
 			level.addFreshEntity(click);
 		}

@@ -174,6 +174,25 @@ public final class PlinthShape {
 	 */
 	public static final Tier[] LIVE = profile(PLATE, COLUMN);
 
+	/**
+	 * How tall the plinth stands and how wide it is at its widest, case included.
+	 *
+	 * <p>These size the click target. It was a hard-coded 1.6 square, which stopped being the right
+	 * answer the moment the shape changed: the plinth reaches 2.06, so the case and the legendary
+	 * inside it stood above the box and aiming at the item — the obvious thing to aim at — missed.
+	 * Reading the numbers off the shape means the target cannot fall behind it again.
+	 */
+	public static final float HEIGHT = extent(Tier::topY);
+	public static final float WIDTH = extent(Tier::scaleX);
+
+	private static float extent(java.util.function.Function<Tier, Float> of) {
+		float most = 0.0f;
+		for (Tier tier : LIVE) {
+			most = Math.max(most, of.apply(tier));
+		}
+		return most;
+	}
+
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
 	public static final float CASE_CENTRE_Y = caseCentre();
 
