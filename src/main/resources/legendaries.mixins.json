@@ -6,6 +6,7 @@
     "BlockDisplayAccessor",
     "BundleContentsMixin",
     "CrafterBlockMixin",
+    "DisplayTransformAccessor",
     "EntityMixin",
     "FoxMixin",
     "HopperBlockEntityMixin",

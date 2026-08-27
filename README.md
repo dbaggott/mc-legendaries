@@ -47,10 +47,13 @@ and handing it to another player all work normally.
 **Losing it.** You cannot. It is fire- and lava-immune already, because vanilla
 registers `netherite_spear` as fire-resistant. Anything that would genuinely
 destroy it — an explosion, a cactus, the void — or leaving it on the ground
-until it despawns puts it back on its **pedestal**: a non-collidable display
-entity that stands at world spawn from the moment a world is created, empty
-until the spear comes home, and can be moved afterwards. Right-click it to take
-the spear back.
+until it despawns puts it back on its **pedestal**: a non-collidable stone
+plinth that stands at world spawn from the moment a world is created, empty
+until something comes home, and can be moved afterwards. Right-click it to take
+one back.
+
+The plinth is display entities rather than placed blocks, so there is nothing to
+mine, nothing to grief and nothing to walk into.
 
 **Spears elsewhere.** No spear drops from any loot table any more, and no mob
 drops the one it was holding — mob equipment drops bypass loot tables entirely,

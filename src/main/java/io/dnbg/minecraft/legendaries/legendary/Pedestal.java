@@ -2,6 +2,7 @@ package io.dnbg.minecraft.legendaries.legendary;
 
 import io.dnbg.minecraft.legendaries.Legendaries;
 import io.dnbg.minecraft.legendaries.mixin.BlockDisplayAccessor;
+import io.dnbg.minecraft.legendaries.mixin.DisplayTransformAccessor;
 import io.dnbg.minecraft.legendaries.mixin.InteractionAccessor;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,9 +19,11 @@ import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
+import org.joml.Vector3f;
 
 /**
  * Where the legendaries wait when nobody is carrying them.
@@ -47,9 +50,25 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
-	private static final double HOVER = 1.25;
+	/**
+	 * The pedestal's shape, tier by tier: the block, how far each side is scaled, and how high the
+	 * tier's centre sits above the pedestal's block position.
+	 *
+	 * <p>A display renders its block full-size and centred on the entity, so a tier is a scale and
+	 * an offset rather than a position — the wide flat base and cap are the same cube squashed.
+	 */
+	private record Tier(Block block, float width, float height, float centreY) {
+	}
+
+	private static final Tier[] TIERS = {
+		new Tier(Blocks.POLISHED_ANDESITE, 1.0f, 0.25f, 0.125f),
+		new Tier(Blocks.LODESTONE, 0.75f, 1.0f, 0.75f),
+		new Tier(Blocks.POLISHED_ANDESITE, 1.0f, 0.25f, 1.375f),
+	};
+
+	private static final double HOVER = 1.9;
 	private static final double SLOT_SPREAD = 0.4;
-	private static final float INTERACTION_SIZE = 1.5f;
+	private static final float INTERACTION_SIZE = 1.8f;
 	private static final double SEARCH_RADIUS = 3.0;
 
 	private Pedestal() {
@@ -142,7 +161,7 @@ public final class Pedestal {
 				displays++;
 			}
 		}
-		return plinths == 1 && targets == 1 && displays == state.onPedestal().size();
+		return plinths == TIERS.length && targets == 1 && displays == state.onPedestal().size();
 	}
 
 	/** Puts a legendary on the pedestal, building it first if it somehow is not there. */
@@ -245,13 +264,25 @@ public final class Pedestal {
 	}
 
 	private static void buildFixtures(ServerLevel level, BlockPos pos) {
-		Display.BlockDisplay plinth = Pedestal.<Display.BlockDisplay>type("block_display")
-				.create(level, EntitySpawnReason.COMMAND);
-		if (plinth != null) {
-			plinth.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			plinth.getEntityData().set(BlockDisplayAccessor.blockStateId(), Blocks.LODESTONE.defaultBlockState());
-			plinth.addTag(TAG);
-			level.addFreshEntity(plinth);
+		for (Tier tier : TIERS) {
+			Display.BlockDisplay part = Pedestal.<Display.BlockDisplay>type("block_display")
+					.create(level, EntitySpawnReason.COMMAND);
+			if (part == null) {
+				continue;
+			}
+			// Every tier sits at the same entity position; scale and translation give it its size
+			// and its height in the stack. Translation is applied in the display's own space, so
+			// halving the scale halves what a unit of translation moves.
+			part.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+			part.getEntityData().set(BlockDisplayAccessor.blockStateId(), tier.block().defaultBlockState());
+			part.getEntityData().set(DisplayTransformAccessor.scaleId(),
+					new Vector3f(tier.width(), tier.height(), tier.width()));
+			// A block model spans 0..1 from its origin, so centring it costs half its own size.
+			part.getEntityData().set(DisplayTransformAccessor.translationId(),
+					new Vector3f(-tier.width() / 2.0f, tier.centreY() - tier.height() / 2.0f,
+							-tier.width() / 2.0f));
+			part.addTag(TAG);
+			level.addFreshEntity(part);
 		}
 
 		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
