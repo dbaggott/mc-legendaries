@@ -53,8 +53,8 @@ until something comes home, and can be moved afterwards. Right-click it to take
 one back.
 
 A purple glass case sits on top, narrower than the cap so it reads as set down
-there, and whatever the pedestal is holding floats inside it at roughly its
-dropped size.
+there, and whatever the pedestal is holding floats inside it, rendered with the
+item's own dropped-item model.
 
 The plinth is display entities rather than placed blocks, so there is nothing to
 mine, nothing to grief and nothing to walk into.

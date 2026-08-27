@@ -99,8 +99,11 @@ public final class PlinthShape {
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
 	public static final float CASE_CENTRE_Y = caseCentre();
 
-	/** How large the item renders — near its dropped size, so it sits in the case with room around it. */
-	public static final float ITEM_SCALE = 0.45f;
+	/**
+	 * Applied on top of the item's own GROUND transform, which already renders it at dropped size.
+	 * Above 1 to lift it off that baseline, because a dropped item alone is small inside the case.
+	 */
+	public static final float ITEM_SCALE = 1.6f;
 
 	private static float caseCentre() {
 		return LIVE[LIVE.length - 1].centreY();

@@ -4,6 +4,7 @@ import io.dnbg.minecraft.legendaries.Legendaries;
 import io.dnbg.minecraft.legendaries.mixin.BlockDisplayAccessor;
 import io.dnbg.minecraft.legendaries.mixin.DisplayTransformAccessor;
 import io.dnbg.minecraft.legendaries.mixin.InteractionAccessor;
+import io.dnbg.minecraft.legendaries.mixin.ItemDisplayAccessor;
 import io.dnbg.minecraft.legendaries.mixin.TextDisplayAccessor;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -221,8 +223,10 @@ public final class Pedestal {
 		double offset = (legendary.ordinal() - (Legendary.values().length - 1) / 2.0) * SLOT_SPREAD;
 		shown.snapTo(pos.getX() + 0.5 + offset, pos.getY() + PlinthShape.CASE_CENTRE_Y, pos.getZ() + 0.5,
 				0.0f, 0.0f);
-		// Shrunk to roughly its dropped size, so it hangs inside the case with room around it
-		// rather than bursting through the glass.
+		// Rendered exactly as a dropped item is. GROUND is the model's own transform for lying on
+		// the floor, so the legendary in the case is the shape players already know, at the size the
+		// model itself specifies — rather than a held item scaled by a number somebody guessed.
+		shown.getEntityData().set(ItemDisplayAccessor.itemDisplayId(), ItemDisplayContext.GROUND.getId());
 		shown.getEntityData().set(DisplayTransformAccessor.scaleId(),
 				new Vector3f(PlinthShape.ITEM_SCALE, PlinthShape.ITEM_SCALE, PlinthShape.ITEM_SCALE));
 		shown.getSlot(0).set(stack);
