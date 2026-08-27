@@ -1,5 +1,8 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
@@ -9,6 +12,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
@@ -53,6 +58,33 @@ public final class MoltenBlast {
 	private static final int FLAMES_PER_SHELL_BLOCK = 2;
 
 	/**
+	 * The boom on the swing: vanilla's own explosion sound, at TNT's volume so it carries as far as
+	 * a real explosion does, and under TNT's pitch of {@code 0.7} so the crater reads as the larger
+	 * event.
+	 *
+	 * <p>Neither scales with the radius. The damage is flat across the crater for the reason given
+	 * at {@link #BLAST_DAMAGE}, and radius is a testing knob — a boom that changed size while the
+	 * knob was being turned would make it harder to hear rather than easier.
+	 */
+	private static final float BLAST_VOLUME = 4.0f;
+	private static final float BLAST_PITCH = 0.5f;
+
+	/**
+	 * The crater crackling as it cools: beats of campfire crackle scattered across the sphere the
+	 * blast just cleared, each quieter than the last until they stop.
+	 *
+	 * <p>Scattered rather than sounded at the centre because the crater is a volume, and one source
+	 * in the middle of a wide one sounds like a point. Faded rather than cut so the crater settles
+	 * instead of falling silent between one tick and the next. Pitched under default for the same
+	 * reason the boom is: a big fire is a low one.
+	 */
+	private static final int SETTLE_BEATS = 4;
+	private static final int SETTLE_TICKS_PER_BEAT = 12;
+	private static final int SETTLE_SOURCES_PER_BEAT = 4;
+	private static final float SETTLE_VOLUME = 3.0f;
+	private static final float SETTLE_PITCH = 0.8f;
+
+	/**
 	 * What the blast does to anything caught in it: two and a half hearts, in health points.
 	 *
 	 * <p>Flat across the crater rather than falling off with distance. The blast erases the whole
@@ -63,10 +95,9 @@ public final class MoltenBlast {
 	/**
 	 * How hard the blast throws what it catches, in sticks of TNT.
 	 *
-	 * <p>Two, and literally so: sticks detonating together each push in their own turn, so twice one
-	 * stick's impulse is what two of them do.
+	 * <p>One, and literally so: this is a single stick's impulse, unmultiplied.
 	 */
-	private static final double KNOCKBACK_TNT = 2.0;
+	private static final double KNOCKBACK_TNT = 1.0;
 
 	/**
 	 * How far a stick of TNT still throws, in blocks: twice its explosion radius of four, which is
@@ -99,6 +130,20 @@ public final class MoltenBlast {
 	private static final ResourceKey<DamageType> MOLTEN_BLAST = ResourceKey.create(
 			Registries.DAMAGE_TYPE, Identifier.fromNamespaceAndPath("legendaries", "molten_blast"));
 
+	/**
+	 * A crater still cooling, and where in the world it is.
+	 *
+	 * <p>Held rather than sounded along with the boom because the beats have to land on later ticks
+	 * than the blast did. The level travels with it, since two players in two dimensions can have
+	 * craters cooling at once, and so does the radius the blast was fired at — the knob can be
+	 * turned while one is still crackling.
+	 */
+	private record Crater(ServerLevel level, Vec3 centre, int blastRadius, int firedTick) {
+	}
+
+	/** Craters still cooling, drained by {@link #settle} as each sounds its last beat. */
+	private static final List<Crater> COOLING = new ArrayList<>();
+
 	private MoltenBlast() {
 	}
 
@@ -117,9 +162,10 @@ public final class MoltenBlast {
 		int shellRadius = blastRadius + 1;
 		BlockPos centre = player.blockPosition();
 		RandomSource random = level.getRandom();
-		// Particles go out before the blocks change, so the burst reads as the cause of the crater
-		// rather than an afterthought once the ground has already gone.
+		// The burst goes out before the blocks change, so it reads as the cause of the crater rather
+		// than an afterthought once the ground has already gone.
 		announce(level, centre, blastRadius);
+		COOLING.add(new Crater(level, middleOf(centre), blastRadius, server.getTickCount()));
 		// Before the ground goes, while everything caught in it is still standing where it was.
 		engulf(level, player, centre, blastRadius);
 
@@ -171,9 +217,7 @@ public final class MoltenBlast {
 		DamageSource source = new DamageSource(
 				level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(MOLTEN_BLAST), player);
 		double reachSqr = (double) blastRadius * blastRadius;
-		// The centre written out rather than asked for: BlockPos.getCenter() exists in 26.1 and was
-		// gone by 26.2, and this is the same arithmetic announce() already does.
-		Vec3 origin = new Vec3(centre.getX() + 0.5, centre.getY() + 0.5, centre.getZ() + 0.5);
+		Vec3 origin = middleOf(centre);
 		AABB caught = new AABB(centre).inflate(blastRadius);
 		for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, caught,
 				candidate -> candidate != player && !candidate.isSpectator()
@@ -184,11 +228,11 @@ public final class MoltenBlast {
 	}
 
 	/**
-	 * Throws one victim clear of the centre, as hard as two sticks of TNT would.
+	 * Throws one victim clear of the centre, as hard as a stick of TNT would.
 	 *
-	 * <p>Vanilla's own explosion impulse, twice over: a linear falloff from the centre out to TNT's
-	 * reach, along the line from the centre to the victim's eyes rather than their feet, so something
-	 * standing on the blast goes up as well as out. What it drops is vanilla's line-of-sight term,
+	 * <p>Vanilla's own explosion impulse: a linear falloff from the centre out to TNT's reach, along
+	 * the line from the centre to the victim's eyes rather than their feet, so something standing on
+	 * the blast goes up as well as out. What it drops is vanilla's line-of-sight term,
 	 * because the sphere between the two is about to be air and there is nothing left to shelter
 	 * behind.
 	 *
@@ -213,25 +257,90 @@ public final class MoltenBlast {
 	}
 
 	/**
-	 * The visible burst.
+	 * The burst and the boom.
 	 *
-	 * <p>{@code sendParticles} is a server-to-client packet, so this reaches a vanilla client with
-	 * nothing installed — which is the property the whole mod is built around. A blast that only
-	 * modded clients could see would be worse than none.
+	 * <p>{@code sendParticles} and {@code playSound} on a {@link ServerLevel} are both
+	 * server-to-client packets, so this reaches a vanilla client with nothing installed — which is
+	 * the property the whole mod is built around. A blast only modded clients could see or hear
+	 * would be worse than none, and it is why the sound is a vanilla one: anything of ours would
+	 * need a resource pack on every client.
 	 *
 	 * <p>{@code EXPLOSION_EMITTER} is the single large bloom TNT uses; the scattered
 	 * {@code EXPLOSION} puffs are spread across the crater's width so the burst fills the volume the
 	 * blast is about to clear rather than sitting at one point.
+	 *
+	 * <p>The null first argument to {@code playSound} is the listener to skip, so nobody is skipped
+	 * — the wielder standing at the centre hears it along with everyone in range.
 	 */
 	private static void announce(ServerLevel level, BlockPos centre, int blastRadius) {
-		double x = centre.getX() + 0.5;
-		double y = centre.getY() + 0.5;
-		double z = centre.getZ() + 0.5;
-		level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, x, y, z, 1, 0.0, 0.0, 0.0, 0.0);
-		level.sendParticles(ParticleTypes.EXPLOSION, x, y, z, EXPLOSION_PUFFS,
+		Vec3 origin = middleOf(centre);
+		level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, origin.x, origin.y, origin.z, 1, 0.0, 0.0, 0.0, 0.0);
+		level.sendParticles(ParticleTypes.EXPLOSION, origin.x, origin.y, origin.z, EXPLOSION_PUFFS,
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.0);
-		level.sendParticles(ParticleTypes.FLAME, x, y, z, EXPLOSION_PUFFS * 2,
+		level.sendParticles(ParticleTypes.FLAME, origin.x, origin.y, origin.z, EXPLOSION_PUFFS * 2,
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.05);
+		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.GENERIC_EXPLODE,
+				SoundSource.BLOCKS, BLAST_VOLUME, BLAST_PITCH);
+	}
+
+	/**
+	 * Sounds a beat for every crater due one this tick, and forgets each once its last beat lands.
+	 *
+	 * <p>A server tick handler because a sound has to be emitted on the server thread, and because
+	 * the tick count is the same clock the crater recorded when it was fired.
+	 */
+	public static void settle(MinecraftServer server) {
+		Iterator<Crater> cooling = COOLING.iterator();
+		while (cooling.hasNext()) {
+			Crater crater = cooling.next();
+			int elapsed = server.getTickCount() - crater.firedTick();
+			// A blast fires earlier in the same tick this handler ends, so the first pass over a
+			// fresh crater sees no elapsed time at all — that moment is the boom's, not a beat's.
+			if (elapsed > 0 && elapsed % SETTLE_TICKS_PER_BEAT == 0) {
+				crackle(crater, elapsed / SETTLE_TICKS_PER_BEAT);
+			}
+			if (elapsed >= SETTLE_BEATS * SETTLE_TICKS_PER_BEAT) {
+				cooling.remove();
+			}
+		}
+	}
+
+	/**
+	 * Drops every crater still cooling, for a server on its way out.
+	 *
+	 * <p>Both halves of what a crater holds go with that server: its level stops being a live world,
+	 * and the tick count its beats are measured against restarts from zero on the next one.
+	 */
+	public static void forgetCoolingCraters() {
+		COOLING.clear();
+	}
+
+	/** One beat of the settling burn, scattered across the crater and quieter the later it falls. */
+	private static void crackle(Crater crater, int beat) {
+		ServerLevel level = crater.level();
+		RandomSource random = level.getRandom();
+		float volume = SETTLE_VOLUME * (float) (SETTLE_BEATS - beat + 1) / SETTLE_BEATS;
+		for (int source = 0; source < SETTLE_SOURCES_PER_BEAT; source++) {
+			Vec3 at = crater.centre().add(scatter(random, crater.blastRadius()),
+					scatter(random, crater.blastRadius()), scatter(random, crater.blastRadius()));
+			level.playSound(null, at.x, at.y, at.z, SoundEvents.CAMPFIRE_CRACKLE,
+					SoundSource.BLOCKS, volume, SETTLE_PITCH);
+		}
+	}
+
+	/** An offset anywhere across the crater's width, on one axis. */
+	private static double scatter(RandomSource random, int blastRadius) {
+		return (random.nextDouble() * 2.0 - 1.0) * blastRadius;
+	}
+
+	/**
+	 * The middle of a block, as a point.
+	 *
+	 * <p>The arithmetic written out rather than asked for: {@code BlockPos.getCenter()} exists in
+	 * 26.1 and was gone by 26.2.
+	 */
+	private static Vec3 middleOf(BlockPos pos) {
+		return new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
 	}
 
 	private static boolean within(BlockPos centre, BlockPos pos, int radius) {
