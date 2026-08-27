@@ -27,8 +27,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The Mace's ability: a sphere of the world around the player is annihilated, and the shell left
- * behind is turned to molten rock.
+ * {@link Ability#MOLTEN_BLAST}: a sphere of the world around the player is annihilated, and the
+ * shell left behind is turned to molten rock. Nothing here reads which item it was fired from, so
+ * every legendary naming this ability gets the same blast.
  *
  * <p>Two passes over the same region, and the order is what makes the shell a shell. The first
  * erases everything within the configured radius; the second converts blocks just outside it that
@@ -179,9 +180,9 @@ public final class MoltenBlast {
 	public static void fire(ServerLevel level, Player player) {
 		MinecraftServer server = level.getServer();
 		LegendaryState state = LegendaryState.get(server);
-		int blastRadius = state.setting(Legendary.MACE, LegendarySetting.RADIUS);
-		int unmelted = state.setting(Legendary.MACE, LegendarySetting.UNMELTED);
-		int knockback = state.setting(Legendary.MACE, LegendarySetting.KNOCKBACK);
+		int blastRadius = state.setting(Ability.MOLTEN_BLAST, LegendarySetting.RADIUS);
+		int unmelted = state.setting(Ability.MOLTEN_BLAST, LegendarySetting.UNMELTED);
+		int knockback = state.setting(Ability.MOLTEN_BLAST, LegendarySetting.KNOCKBACK);
 		// One block of reach past the crater, which is where the shell can be.
 		int shellRadius = blastRadius + 1;
 		BlockPos centre = player.blockPosition();

@@ -1,5 +1,6 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import java.util.Optional;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -7,8 +8,8 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -53,7 +54,8 @@ public final class LegendaryRules {
 		spinPedestal();
 		settleCraters();
 		grantCarriedEffects();
-		wireMoltenBlast();
+		wireAbilities();
+		showAbilityWaits();
 		wireEntityInteractions();
 		refuseDirectPlacement();
 	}
@@ -165,7 +167,8 @@ public final class LegendaryRules {
 			if (!Legendary.isAny(player.getItemInHand(hand))) {
 				return InteractionResult.PASS;
 			}
-			refuse(player, legendaryName(player.getItemInHand(hand)) + " will not be left on display.");
+			Actionbar.say(player, Component.literal(
+					legendaryName(player.getItemInHand(hand)) + " will not be left on display."));
 			return InteractionResult.FAIL;
 		});
 	}
@@ -197,7 +200,7 @@ public final class LegendaryRules {
 			if (!refuse) {
 				return InteractionResult.PASS;
 			}
-			refuse(player, "That will not be set down there.");
+			Actionbar.say(player, Component.literal("That will not be set down there."));
 			return InteractionResult.FAIL;
 		});
 	}
@@ -250,34 +253,45 @@ public final class LegendaryRules {
 	}
 
 	/**
-	 * Sneak + right-click with the Mace fires a Molten Blast.
+	 * Sneak + right-click with a legendary that carries an ability fires it.
 	 *
-	 * <p>Sneak-gated rather than a plain right-click because the blast deletes the ground under the
-	 * player's feet — an accidental trigger is expensive in a way a mis-swing is not. A keybind would read better still, but only for players who
-	 * installed the mod; this works from a vanilla client.
+	 * <p>Sneak-gated rather than a plain right-click because a blast deletes the ground under the
+	 * player's feet — an accidental trigger is expensive in a way a mis-swing is not. A keybind would
+	 * read better still, but only for players who installed the mod; this works from a vanilla
+	 * client.
+	 *
+	 * <p>Which legendary it was is read once, to find the ability, and then dropped: the wait, the
+	 * settings and the blast itself are all the ability's, so a second carrier of the same one needs
+	 * nothing here.
+	 *
+	 * <p>The refusal is the server's alone. Nothing about a wait reaches the client — the countdown is
+	 * text the server sends rather than a swipe drawn from the client's own cooldowns — so the swing
+	 * plays and the server declines behind it. The countdown is already on screen saying why.
 	 */
-	private static void wireMoltenBlast() {
+	private static void wireAbilities() {
 		UseItemCallback.EVENT.register((player, level, hand) -> {
 			ItemStack held = player.getItemInHand(hand);
-			if (!Legendary.MACE.is(held) || !player.isShiftKeyDown()) {
+			Optional<Ability> carried = Legendary.of(held).flatMap(Legendary::ability);
+			if (carried.isEmpty() || !player.isShiftKeyDown()) {
 				return InteractionResult.PASS;
 			}
 			if (level instanceof ServerLevel serverLevel) {
 				MinecraftServer server = serverLevel.getServer();
-				if (!AbilityCooldown.ready(server, player, Legendary.MACE)) {
+				Ability ability = carried.get();
+				if (!AbilityCooldown.ready(server, player, ability)) {
 					return InteractionResult.FAIL;
 				}
-				MoltenBlast.fire(serverLevel, player);
-				AbilityCooldown.begin(server, player, Legendary.MACE, held);
-			} else if (player.getCooldowns().isOnCooldown(held)) {
-				// A client has no settings to read, so the swipe the server sent it is the whole of
-				// what it knows about the wait. Refusing on that is what keeps the swing animation
-				// off a modded client mid-cooldown; a vanilla one swings and the server refuses.
-				return InteractionResult.FAIL;
+				ability.fire(serverLevel, player);
+				AbilityCooldown.begin(server, player, ability);
 			}
 			// SUCCESS on both sides so the client plays the swing rather than waiting on the server.
 			return InteractionResult.SUCCESS;
 		});
+	}
+
+	/** Keeps every running wait on its owner's screen. */
+	private static void showAbilityWaits() {
+		ServerTickEvents.END_SERVER_TICK.register(AbilityCooldown::showWaits);
 	}
 
 	/** How to name whatever legendary this stack is, for a message aimed at a player. */
@@ -285,10 +299,4 @@ public final class LegendaryRules {
 		return Legendary.of(stack).map(Legendary::displayName).orElse("That");
 	}
 
-	/** Tells the player why, on the actionbar, where a refusal is read rather than scrolled past. */
-	public static void refuse(Player player, String message) {
-		if (player instanceof ServerPlayer serverPlayer) {
-			serverPlayer.sendSystemMessage(Component.literal(message), true);
-		}
-	}
 }

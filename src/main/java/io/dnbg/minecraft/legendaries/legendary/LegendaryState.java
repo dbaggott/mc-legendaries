@@ -77,23 +77,26 @@ public class LegendaryState extends SavedData {
 	}
 
 	/**
-	 * Overridden ability settings, keyed {@code LEGENDARY.setting}.
+	 * Overridden ability settings, keyed {@code ABILITY.setting}.
+	 *
+	 * <p>Keyed by the ability rather than by whichever legendary carries it, because that is what
+	 * the settings describe — two carriers of one ability tune together or they are two abilities.
 	 *
 	 * <p>A flat string-keyed map rather than a field per setting: these exist to be changed while
 	 * testing, and a new one should not need a codec change and a world-format migration. An entry
 	 * nothing recognises is simply never read.
 	 */
-	public int setting(Legendary legendary, LegendarySetting setting) {
-		return settings.getOrDefault(key(legendary, setting), setting.defaultValue());
+	public int setting(Ability ability, LegendarySetting setting) {
+		return settings.getOrDefault(key(ability, setting), setting.defaultValue());
 	}
 
-	public void setSetting(Legendary legendary, LegendarySetting setting, int value) {
-		settings.put(key(legendary, setting), value);
+	public void setSetting(Ability ability, LegendarySetting setting, int value) {
+		settings.put(key(ability, setting), value);
 		setDirty();
 	}
 
-	private static String key(Legendary legendary, LegendarySetting setting) {
-		return legendary.name() + "." + setting.commandName();
+	private static String key(Ability ability, LegendarySetting setting) {
+		return ability.name() + "." + setting.commandName();
 	}
 
 	/** The overworld, which is where this state lives regardless of who is asking. */
