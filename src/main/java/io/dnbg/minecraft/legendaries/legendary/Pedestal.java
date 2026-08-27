@@ -35,11 +35,16 @@ import org.joml.Vector3f;
  * right-click into a claim. Nothing is placed in the world, so there is nothing to mine, nothing to
  * grief, and nothing to collide with — a display entity has no collision at all.
  *
- * <p><strong>The pedestal is a fixture, not a container that appears when full.</strong> It stands
- * at world spawn from the first tick of a world and stays there whether or not anything is on it;
- * only the item displays come and go. Building it on arrival and tearing it down on collection made
- * it invisible in the state that matters most — a legendary is out there somewhere, and the empty
- * plinth is the thing that tells you where it will come back to.
+ * <p><strong>The plinth is a fixture, not a container that appears when full.</strong> It stands
+ * at world spawn from the first tick of a world and stays there whether or not anything is on it.
+ * Building it on arrival and tearing it down on collection made it invisible in the state that
+ * matters most — a legendary is out there somewhere, and the empty plinth is the thing that tells
+ * you where it will come back to.
+ *
+ * <p><strong>The glass case is not: it stands exactly while a legendary does.</strong> A case with
+ * nothing in it reads as a display that has lost its exhibit, and it is a click target that answers
+ * nothing. So the case and its {@link Interaction} go up together when the pedestal fills and come
+ * down together when the last legendary is claimed — while the plinth under them stays put.
  *
  * <p><strong>An item display holds the authoritative stack.</strong> The legendary that returns here
  * is the same stack that left, kept on its display rather than copied into saved data — so a rename
@@ -51,6 +56,15 @@ public final class Pedestal {
 	public static final String TAG = "legendaries_pedestal";
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
+
+	/**
+	 * Marks the glass case and the click target that answers for it.
+	 *
+	 * <p>The pair is raised and taken down as the pedestal fills and empties, so it has to be
+	 * findable without recognising it by block or by position in the tier table — both of which
+	 * would break the moment the shape changed.
+	 */
+	private static final String CASE_TAG = "legendaries_case";
 
 	/**
 	 * Marks which shape an entity was built to, so a pedestal already standing is rebuilt when the
@@ -104,7 +118,7 @@ public final class Pedestal {
 	}
 
 	/**
-	 * Builds the plinth and click target if they are not standing, and does nothing if they are.
+	 * Builds the pedestal to the shape it should be standing in, and does nothing if it already is.
 	 *
 	 * <p>Three callers, and only one of them waits. The session tick holds off until the site's
 	 * <em>entity index</em> reports loaded — not merely its chunk, which arrives first and would make
@@ -130,7 +144,8 @@ public final class Pedestal {
 		// replacement.
 		List<ItemStack> held = heldStacks(level, pos);
 		clearEntities(level, pos);
-		buildFixtures(level, pos);
+		boolean holding = !state.onPedestal().isEmpty();
+		buildFixtures(level, pos, holding);
 		for (ItemStack stack : held) {
 			Legendary.of(stack).ifPresent(legendary -> showSlot(level, pos, legendary, stack));
 		}
@@ -141,8 +156,8 @@ public final class Pedestal {
 	}
 
 	/**
-	 * Whether the plinth, the click target and exactly the expected item displays are all present,
-	 * and all built to the shape this version draws.
+	 * Whether the plinth, exactly the expected item displays, and the case and click target that
+	 * belong with them are all present, and all built to the shape this version draws.
 	 *
 	 * <p><strong>The shape tag is what makes a change reach a world that already has a pedestal.</strong>
 	 * Counting alone only notices a tier being added or removed; a different block, a different
@@ -165,7 +180,10 @@ public final class Pedestal {
 				displays++;
 			}
 		}
-		return plinths == PlinthShape.LIVE.length && targets == 1 && displays == state.onPedestal().size();
+		// The case and its click target are a pair, standing exactly while a legendary does.
+		int occupants = state.onPedestal().size();
+		int cases = occupants == 0 ? 0 : 1;
+		return plinths == PlinthShape.PLINTH.length + cases && targets == cases && displays == occupants;
 	}
 
 	/** Puts a legendary on the pedestal, building it first if it somehow is not there. */
@@ -194,7 +212,11 @@ public final class Pedestal {
 		// But the mark must still land before the display spawns: spawning into a loaded chunk fires
 		// the entity-load event synchronously.
 		ensure(server);
+		boolean wasEmpty = state.onPedestal().isEmpty();
 		state.setOnPedestal(legendary, true);
+		if (wasEmpty) {
+			raiseCase(level, pos);
+		}
 		showSlot(level, pos, legendary, stack.copy());
 		Legendaries.LOGGER.info("{} returned to its pedestal at {}", legendary.displayName(), pos);
 	}
@@ -203,7 +225,8 @@ public final class Pedestal {
 	 * Takes one named legendary off the pedestal, or an empty stack if it is not standing there.
 	 *
 	 * <p>The stack comes off its item display rather than being rebuilt, so whatever it carried when
-	 * it arrived is what leaves. The pedestal itself stays standing — only what it holds changes.
+	 * it arrived is what leaves. The plinth stays standing; the case comes down with the last
+	 * legendary to leave.
 	 *
 	 * <p><strong>Empty covers "not there" and "cannot see yet" alike.</strong> The displays are read
 	 * through the world, so an unloaded entity index reads as an empty pedestal — a caller that must
@@ -218,6 +241,9 @@ public final class Pedestal {
 			if (legendary.is(held)) {
 				clearSlot(level, pos, legendary);
 				state.setOnPedestal(legendary, false);
+				if (state.onPedestal().isEmpty()) {
+					clearCase(level, pos);
+				}
 				return held;
 			}
 		}
@@ -335,8 +361,20 @@ public final class Pedestal {
 		return held;
 	}
 
-	private static void buildFixtures(ServerLevel level, BlockPos pos) {
-		buildTiers(level, pos, PlinthShape.LIVE);
+	private static void buildFixtures(ServerLevel level, BlockPos pos, boolean cased) {
+		buildTiers(level, pos, PlinthShape.PLINTH);
+		if (cased) {
+			raiseCase(level, pos);
+		}
+	}
+
+	/** Puts the glass case up, along with the click target that answers for it. */
+	private static void raiseCase(ServerLevel level, BlockPos pos) {
+		Display.BlockDisplay glass = tierDisplay(level, pos, PlinthShape.CASE_TIER);
+		if (glass != null) {
+			glass.addTag(CASE_TAG);
+			level.addFreshEntity(glass);
+		}
 
 		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
 		if (click != null) {
@@ -349,33 +387,57 @@ public final class Pedestal {
 			click.getEntityData().set(InteractionAccessor.heightId(), PlinthShape.CASE_SIZE);
 			click.addTag(TAG);
 			click.addTag(SHAPE_TAG);
+			click.addTag(CASE_TAG);
 			level.addFreshEntity(click);
+		}
+	}
+
+	/** Takes the glass case and its click target down, leaving the plinth standing. */
+	private static void clearCase(ServerLevel level, BlockPos pos) {
+		for (Entity entity : ours(level, pos)) {
+			if (entity.entityTags().contains(CASE_TAG)) {
+				entity.discard();
+			}
 		}
 	}
 
 	/** Spawns one plinth's worth of block displays, one per tier. */
 	private static void buildTiers(ServerLevel level, BlockPos pos, PlinthShape.Tier[] tiers) {
 		for (PlinthShape.Tier tier : tiers) {
-			Display.BlockDisplay part = Pedestal.<Display.BlockDisplay>type("block_display")
-					.create(level, EntitySpawnReason.COMMAND);
-			if (part == null) {
-				continue;
+			Display.BlockDisplay part = tierDisplay(level, pos, tier);
+			if (part != null) {
+				level.addFreshEntity(part);
 			}
-			// Every tier sits at the same entity position; scale and translation give it its size
-			// and its height in the stack. Translation is applied in the display's own space, so
-			// halving the scale halves what a unit of translation moves.
-			part.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			part.getEntityData().set(BlockDisplayAccessor.blockStateId(), tier.block().defaultBlockState());
-			part.getEntityData().set(DisplayTransformAccessor.scaleId(),
-					new Vector3f(tier.scaleX(), tier.scaleY(), tier.scaleZ()));
-			// A block model grows from its own origin, so horizontal centring costs half its scaled
-			// width — and the vertical offset is simply where its underside goes.
-			part.getEntityData().set(DisplayTransformAccessor.translationId(),
-					new Vector3f(-tier.scaleX() / 2.0f, tier.bottomY(), -tier.scaleZ() / 2.0f));
-			part.addTag(TAG);
-			part.addTag(SHAPE_TAG);
-			level.addFreshEntity(part);
 		}
+	}
+
+	/**
+	 * One tier as a block display, marked as ours but not yet in the world.
+	 *
+	 * <p>Left unspawned so the caller can mark it further first — the case wears a tag the plinth
+	 * tiers do not. Spawning into a loaded chunk fires the entity-load event synchronously, so an
+	 * entity reaches its first reader carrying exactly the tags it had when it went in.
+	 */
+	private static Display.BlockDisplay tierDisplay(ServerLevel level, BlockPos pos, PlinthShape.Tier tier) {
+		Display.BlockDisplay part = Pedestal.<Display.BlockDisplay>type("block_display")
+				.create(level, EntitySpawnReason.COMMAND);
+		if (part == null) {
+			return null;
+		}
+		// Every tier sits at the same entity position; scale and translation give it its size
+		// and its height in the stack. Translation is applied in the display's own space, so
+		// halving the scale halves what a unit of translation moves.
+		part.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+		part.getEntityData().set(BlockDisplayAccessor.blockStateId(), tier.block().defaultBlockState());
+		part.getEntityData().set(DisplayTransformAccessor.scaleId(),
+				new Vector3f(tier.scaleX(), tier.scaleY(), tier.scaleZ()));
+		// A block model grows from its own origin, so horizontal centring costs half its scaled
+		// width — and the vertical offset is simply where its underside goes.
+		part.getEntityData().set(DisplayTransformAccessor.translationId(),
+				new Vector3f(-tier.scaleX() / 2.0f, tier.bottomY(), -tier.scaleZ() / 2.0f));
+		part.addTag(TAG);
+		part.addTag(SHAPE_TAG);
+		return part;
 	}
 
 	/** Removes the pedestal's entities without touching the state's record of where it is. */

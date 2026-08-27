@@ -52,9 +52,11 @@ plinth that stands at world spawn from the moment a world is created, empty
 until something comes home, and can be moved afterwards. Right-click the glass to
 take one back.
 
-A purple glass case sits on top, narrower than the cap so it reads as set down
-there, and whatever the pedestal is holding turns slowly inside it, rendered with
-the item's own dropped-item model.
+A purple glass case rises on top whenever the pedestal is holding something,
+narrower than the cap so it reads as set down there, and what it holds turns
+slowly inside it, rendered with the item's own dropped-item model. Claim the last
+legendary off the pedestal and the case comes down with it, leaving the bare
+plinth waiting.
 
 The plinth is display entities rather than placed blocks, so there is nothing to
 mine, nothing to grief and nothing to walk into.
