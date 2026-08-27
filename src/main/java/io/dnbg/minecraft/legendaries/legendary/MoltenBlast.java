@@ -3,19 +3,23 @@ package io.dnbg.minecraft.legendaries.legendary;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The Mace's ability: a sphere of the world around the player is annihilated, and the shell left
@@ -62,8 +66,29 @@ public final class MoltenBlast {
 	private static final float BLAST_DAMAGE = 5.0f;
 
 	/**
+	 * How hard the blast throws what it catches, in sticks of TNT.
+	 *
+	 * <p>Two, and literally so: sticks detonating together each push in their own turn, so twice one
+	 * stick's impulse is what two of them do.
+	 */
+	private static final double KNOCKBACK_TNT = 2.0;
+
+	/**
+	 * How far a stick of TNT still throws, in blocks: twice its explosion radius of four, which is
+	 * the span vanilla's impulse falls off over.
+	 *
+	 * <p>TNT's reach rather than the crater's, because TNT is what the throw is matched to and the
+	 * crater's radius is a knob. A blast configured wider than this has an outer band that is burned
+	 * and not thrown.
+	 */
+	private static final double TNT_KNOCKBACK_REACH = 8.0;
+
+	/**
 	 * The damage this deals, defined in {@code data/legendaries/damage_type/molten_blast.json} and
-	 * added to {@code #minecraft:bypasses_armor} by a tag beside it.
+	 * added to {@code #minecraft:bypasses_armor} and {@code #minecraft:no_knockback} by tags beside
+	 * it. The second is what every vanilla explosion type carries: damage shoves its victim by
+	 * default, away from wherever the source stood, and that shove would land on top of the impulse
+	 * {@link #hurl} computes rather than instead of it.
 	 *
 	 * <p>A type of its own rather than {@code magic}, which is the vanilla type that bypasses armor,
 	 * because a type is also what names the death message and "was killed by magic" is not what
@@ -99,7 +124,7 @@ public final class MoltenBlast {
 		// rather than an afterthought once the ground has already gone.
 		announce(level, centre, blastRadius);
 		// Before the ground goes, while everything caught in it is still standing where it was.
-		scorch(level, player, centre, blastRadius);
+		engulf(level, player, centre, blastRadius);
 
 		// Pass one: erase the crater. No drops — the sphere runs to hundreds of blocks and grows with
 		// the cube of the radius, so dropping them would bury the player in item entities and cost
@@ -132,29 +157,56 @@ public final class MoltenBlast {
 	}
 
 	/**
-	 * Burns everything inside the crater, except the one who set it off.
+	 * What the blast does to the living inside the crater, except the one who set it off: burns them,
+	 * and throws them clear.
 	 *
 	 * <p>The wielder is spared because the blast is centred on them: they are always inside their
 	 * own radius, so charging them for it would make every use cost two and a half hearts that no
-	 * armor could soften. Everything else living in the sphere takes the full amount.
+	 * armor could soften, and fire them straight up out of their own crater. Everything else living
+	 * in the sphere takes the full amount. A spectator is excluded as well: the damage already
+	 * passes them by, and throwing one would be the blast reaching somebody who is not there.
 	 *
 	 * <p>Distance is measured from the entity's own position rather than the block it stands in,
 	 * because an entity is a point and a block is not — rounding to the block would spare something
 	 * standing just inside the edge and burn something just outside it.
 	 */
-	private static void scorch(ServerLevel level, Player player, BlockPos centre, int blastRadius) {
+	private static void engulf(ServerLevel level, Player player, BlockPos centre, int blastRadius) {
 		DamageSource source = new DamageSource(
 				level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(MOLTEN_BLAST), player);
 		double reachSqr = (double) blastRadius * blastRadius;
 		// The centre written out rather than asked for: BlockPos.getCenter() exists in 26.1 and was
 		// gone by 26.2, and this is the same arithmetic announce() already does.
-		double x = centre.getX() + 0.5;
-		double y = centre.getY() + 0.5;
-		double z = centre.getZ() + 0.5;
+		Vec3 origin = new Vec3(centre.getX() + 0.5, centre.getY() + 0.5, centre.getZ() + 0.5);
 		AABB caught = new AABB(centre).inflate(blastRadius);
 		for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, caught,
-				candidate -> candidate != player && candidate.distanceToSqr(x, y, z) <= reachSqr)) {
+				candidate -> candidate != player && !candidate.isSpectator()
+						&& candidate.distanceToSqr(origin) <= reachSqr)) {
 			victim.hurtServer(level, source, BLAST_DAMAGE);
+			hurl(victim, origin);
+		}
+	}
+
+	/**
+	 * Throws one victim clear of the centre, as hard as two sticks of TNT would.
+	 *
+	 * <p>Vanilla's own explosion impulse, twice over: a linear falloff from the centre out to TNT's
+	 * reach, along the line from the centre to the victim's eyes rather than their feet, so something
+	 * standing on the blast goes up as well as out. What it drops is vanilla's line-of-sight term,
+	 * because the sphere between the two is about to be air and there is nothing left to shelter
+	 * behind.
+	 *
+	 * <p>A thrown player is handed the impulse directly. A push changes the server's copy of an
+	 * entity's motion, and the server sends that copy to everyone tracking the entity — everyone
+	 * except the player it belongs to, whose own client is the authority on where they are. Without
+	 * the packet a player is burned and stays standing.
+	 */
+	private static void hurl(LivingEntity victim, Vec3 centre) {
+		double falloff = Math.max(1.0 - Math.sqrt(victim.distanceToSqr(centre)) / TNT_KNOCKBACK_REACH, 0.0);
+		double resistance = victim.getAttributeValue(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE);
+		Vec3 outward = victim.getEyePosition().subtract(centre).normalize();
+		victim.push(outward.scale(KNOCKBACK_TNT * falloff * (1.0 - resistance)));
+		if (victim instanceof ServerPlayer thrown) {
+			thrown.connection.send(new ClientboundSetEntityMotionPacket(thrown));
 		}
 	}
 

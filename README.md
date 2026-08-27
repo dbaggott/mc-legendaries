@@ -83,9 +83,10 @@ netherrack, coal, or **left as it is** at weights 4 / 4 / 4 / 3 — so one shell
 whatever it was made of, and the crater's edge shows the ground it was cut from rather than a
 uniform coat.
 
-Everything else alive inside the radius takes **two and a half hearts**, and armour does not
-soften it. You are the exception: the blast is centred on you, so charging you for it would tax
-every use.
+Everything else alive inside the radius takes **two and a half hearts**, armour does not soften it,
+and it is thrown clear as hard as **two sticks of TNT** — hardest at the centre, fading to nothing
+eight blocks out, and softened by blast protection the way an explosion is. You are the exception to
+both: the blast is centred on you, so charging you for it would tax every use.
 
 Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
 or the Nether roof. Nothing drops; a sphere that size is over two hundred blocks and would bury you in items. **60 second
