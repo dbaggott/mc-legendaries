@@ -1,6 +1,7 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
@@ -10,14 +11,36 @@ import net.minecraft.world.level.block.SlabBlock;
 /**
  * The plinth's silhouette, and the candidates being compared against it.
  *
- * <p>A tier is a block, a width, a height and the height of its centre; a display renders its block
- * full-size and centred on the entity, so scale and translation fall out of those four numbers.
+ * <p>A plinth is plates and a column: thin bands top and bottom, something with a face between
+ * them. A display entity renders whatever block it is given at whatever scale it is given, so both
+ * halves are available — but they want opposite treatment, and that is the whole content of this
+ * file.
  *
- * <p><strong>Scale a block unevenly and its texture stretches.</strong> A full block squashed to a
- * tenth of its height renders its 16x16 faces at 16x2, and the result reads as smeared rather than
- * as stone. {@link #uniform} is the way out: it takes a scale and derives the height from what the
- * block naturally is, so a slab stays a slab and every pixel stays square. Thin tiers come from
- * naturally thin blocks rather than from crushing tall ones.
+ * <h2>The column is scaled evenly; the plates are not</h2>
+ *
+ * <p>Scale a block unevenly and its texture stretches with it. That is fatal for the column,
+ * because the column is chosen for its face: squash the concentric motif on a lodestone and the
+ * motif is what you ruin. {@link #even} is the rule there — one scale on every axis, so the block's
+ * own proportions and every pixel of its face survive.
+ *
+ * <p>A plate is the opposite case. It has to be thin, and there is no vanilla stone block thin
+ * enough — a slab, the thinnest, is still half a block, so a foot and a cap built from slabs cost a
+ * block of height between them and the plinth becomes a column with no room for anything else.
+ * Plates are therefore squashed, and {@link #plate} takes the thickness it should end up rather
+ * than a scale, so the number in the table is the thing being chosen.
+ *
+ * <h2>Which block a plate may be made of</h2>
+ *
+ * <p><strong>Squashing merges rows of the texture, so only a block whose rows resemble each other
+ * may be a plate.</strong> A brick or tile pattern has strong row-to-row structure and turns to
+ * mush; a flat or finely-speckled texture loses nothing you could name. {@link #PLATE} is the
+ * darkest block in the stone family whose rows differ least — compare it against
+ * {@code polished_deepslate}, which was the plate before and whose banding is visibly smeared at
+ * these thicknesses.
+ *
+ * <p>So the prohibition is on stretching a block <em>chosen for its face</em>, not on stretching.
+ * Anything with a motif — the column, the case — is {@link #even}. Only plates are squashed, and
+ * only from a block picked for surviving it.
  */
 public final class PlinthShape {
 	/**
@@ -43,8 +66,18 @@ public final class PlinthShape {
 		}
 	}
 
-	private static final Block DARK = Blocks.POLISHED_DEEPSLATE;
-	private static final Block DARK_SLAB = Blocks.POLISHED_DEEPSLATE_SLAB;
+	/** The column: chosen for the concentric frame on its side, which is why it is never squashed. */
+	private static final Block COLUMN = Blocks.LODESTONE;
+
+	/**
+	 * The plates.
+	 *
+	 * <p>Picked by measuring how much each candidate's texture changes from one row to the next,
+	 * because that is exactly what squashing destroys. Of the dark stone-family blocks this was the
+	 * flattest, so it survives being a tenth of a block tall with nothing visibly smeared, and it is
+	 * dark enough to frame the column rather than blend into it.
+	 */
+	private static final Block PLATE = Blocks.NETHERITE_BLOCK;
 
 	/**
 	 * The case the legendary sits inside.
@@ -57,73 +90,73 @@ public final class PlinthShape {
 	private static final Block CASE = BuiltInRegistries.BLOCK.getValue(
 			Identifier.withDefaultNamespace("purple_stained_glass"));
 
+	/** How wide the case is. Narrower than the cap, so it reads as set down on the plinth. */
+	private static final float CASE_SCALE = 0.7f;
+
 	/** How tall this block is in its own right, before any scaling. */
 	private static float naturalHeight(Block block) {
 		return block instanceof SlabBlock ? 0.5f : 1.0f;
 	}
 
 	/**
-	 * A tier scaled evenly, sitting on top of whatever is at {@code bottomY}.
+	 * Builds a profile a tier at a time, each sitting flush on the one below.
 	 *
-	 * <p>Even scaling is the whole point: width and height move together, so the block's own
-	 * proportions survive and its texture is not stretched.
+	 * <p>Nothing outside here computes a {@code bottomY}: the builder carries the running height, so
+	 * a tier cannot be left floating above the one under it or sunk into it. Getting that wrong by
+	 * hand is what once made the plinth come apart in-world.
 	 */
-	private static Tier uniform(Block block, float scale, float bottomY) {
-		return new Tier(block, scale, scale, scale, bottomY);
-	}
+	private static final class Profile {
+		private final List<Tier> tiers = new ArrayList<>();
+		private float y = 0.0f;
 
-	/** Stacks tiers flush, each sitting on the one below, and returns the finished profile. */
-	private static Tier[] stack(Object... blockThenScale) {
-		Tier[] tiers = new Tier[blockThenScale.length / 2];
-		float y = 0.0f;
-		for (int i = 0; i < tiers.length; i++) {
-			Block block = (Block) blockThenScale[i * 2];
-			float scale = ((Number) blockThenScale[i * 2 + 1]).floatValue();
-			tiers[i] = uniform(block, scale, y);
-			y = tiers[i].topY();
+		/** A tier scaled evenly, so the block's proportions and its face both survive. */
+		Profile even(Block block, float scale) {
+			return add(new Tier(block, scale, scale, scale, y));
 		}
-		return tiers;
-	}
 
-	/** How wide the case is, as a fraction of a block. Narrower than the cap it sits on. */
-	private static final float CASE_SCALE = 0.7f;
+		/**
+		 * A plate of exactly {@code thickness}, however tall its block naturally is.
+		 *
+		 * <p>The caller names the thickness rather than a scale because the thickness is the thing
+		 * being chosen; the squash needed to reach it is arithmetic.
+		 */
+		Profile plate(Block block, float width, float thickness) {
+			return add(new Tier(block, width, thickness / naturalHeight(block), width, y));
+		}
 
-	/**
-	 * Appends the case to a profile, so no caller has to remember to and no profile can omit it.
-	 *
-	 * <p>The case being last is relied on nowhere: {@link #caseCentre} finds it by block. Every
-	 * profile gets one, which is what makes {@link #VARIANTS} a like-for-like comparison.
-	 */
-	private static Tier[] cased(Object... blockThenScale) {
-		Object[] all = Arrays.copyOf(blockThenScale, blockThenScale.length + 2);
-		all[blockThenScale.length] = CASE;
-		all[blockThenScale.length + 1] = CASE_SCALE;
-		return stack(all);
+		private Profile add(Tier tier) {
+			tiers.add(tier);
+			y = tier.topY();
+			return this;
+		}
+
+		/**
+		 * Closes the profile with the glass case, so no profile can omit one.
+		 *
+		 * <p>Every profile getting a case is what makes {@link #VARIANTS} a like-for-like row rather
+		 * than plinths compared against bare stacks.
+		 */
+		Tier[] cased() {
+			even(CASE, CASE_SCALE);
+			return tiers.toArray(new Tier[0]);
+		}
 	}
 
 	/**
 	 * The pedestal as it actually stands, glass case included.
 	 *
-	 * <p>Two things carry the look, and both are texture rather than geometry. The shaft is
-	 * <strong>chiseled stone bricks</strong>, whose face is a bordered frame around a sunken inner
-	 * square — the recessed panel a display entity cannot carve, drawn by the block itself. And the
-	 * foot is <strong>two slabs</strong> rather than one, which is the stepped base of a plinth for
-	 * the price of one more display.
-	 *
-	 * <p><strong>There are deliberately no corner brackets.</strong> The obvious next ornament is a
-	 * stair at each top corner, and it does not work at any size: whichever corner faces the viewer
-	 * lands in the middle of the visible face, on top of the panel it was meant to set off. Smaller
-	 * makes it a wart rather than a corbel, and there is no offset that clears the panel without
-	 * overhanging the cap. The panel is doing the work; leave it visible.
-	 *
-	 * <p>The case is narrower than the cap it sits on, so it reads as set down on the plinth rather
-	 * than as another tier of it.
+	 * <p>A stepped foot, a lodestone column, a stepped cap and the case. The steps are what make it
+	 * read as a plinth rather than a post, and they are only affordable because plates are squashed
+	 * — six of them together cost half a block of height, where six slabs would cost three.
 	 */
-	public static final Tier[] LIVE = cased(
-			DARK_SLAB, 1.06f,
-			DARK_SLAB, 0.9f,
-			Blocks.CHISELED_STONE_BRICKS, 0.8f,
-			DARK_SLAB, 0.95f);
+	public static final Tier[] LIVE = new Profile()
+			.plate(PLATE, 1.0f, 0.12f)
+			.plate(PLATE, 0.9f, 0.10f)
+			.even(COLUMN, 0.8f)
+			.plate(PLATE, 0.86f, 0.06f)
+			.plate(PLATE, 0.9f, 0.10f)
+			.plate(PLATE, 1.0f, 0.14f)
+			.cased();
 
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
 	public static final float CASE_CENTRE_Y = caseCentre();
@@ -146,37 +179,38 @@ public final class PlinthShape {
 	public record Variant(String label, Tier[] tiers) {
 	}
 
+	/** The live profile with one thing swapped, so a candidate is judged beside what it would replace. */
+	private static Tier[] swap(Block plate, Block column) {
+		return new Profile()
+				.plate(plate, 1.0f, 0.12f)
+				.plate(plate, 0.9f, 0.10f)
+				.even(column, 0.8f)
+				.plate(plate, 0.86f, 0.06f)
+				.plate(plate, 0.9f, 0.10f)
+				.plate(plate, 1.0f, 0.14f)
+				.cased();
+	}
+
 	/**
 	 * The candidates {@code /legendaries debug plinths} stands in a row, so a shape can be judged
 	 * beside the alternatives rather than on its own.
 	 *
-	 * <p>Every one is {@link #cased}, so the row compares plinths rather than plinths against
-	 * bare stacks. {@code stretched} is the shape from before even scaling, kept so the reason for
-	 * that rule stays visible rather than merely asserted.
+	 * <p>Each varies one thing against {@link #LIVE}: the plate block, or the column. The plate
+	 * candidates are the runners-up on the row-to-row measure, kept so the choice can be re-made by
+	 * eye rather than taken on the number's word.
 	 */
 	public static final Variant[] VARIANTS = {
-		new Variant("stretched (old)", new Tier[] {
-			// Deliberately uneven, kept so the comparison is visible rather than asserted. These
-			// are the numbers from before uniform scaling; every one of them squashes its block.
-			new Tier(DARK, 1.0f, 0.12f, 1.0f, 0.0f),
-			new Tier(DARK, 0.9f, 0.10f, 0.9f, 0.12f),
-			new Tier(Blocks.LODESTONE, 0.82f, 0.72f, 0.82f, 0.22f),
-			new Tier(DARK, 0.86f, 0.06f, 0.86f, 0.94f),
-			new Tier(DARK, 0.9f, 0.10f, 0.9f, 1.0f),
-			new Tier(DARK, 1.0f, 0.14f, 1.0f, 1.1f),
-		}),
 		new Variant("live", LIVE),
-		new Variant("lodestone shaft", cased(
-				DARK_SLAB, 1.06f, DARK_SLAB, 0.9f, Blocks.LODESTONE, 0.8f, DARK_SLAB, 0.95f)),
-		new Variant("plain foot", cased(
-				DARK_SLAB, 1.0f, Blocks.CHISELED_STONE_BRICKS, 0.8f, DARK_SLAB, 0.95f)),
-		new Variant("squat", cased(
-				DARK_SLAB, 1.06f, DARK_SLAB, 0.9f, Blocks.CHISELED_STONE_BRICKS, 0.62f, DARK_SLAB, 0.95f)),
-		new Variant("tall", cased(
-				DARK_SLAB, 1.06f, DARK_SLAB, 0.9f, Blocks.CHISELED_STONE_BRICKS, 1.0f, DARK_SLAB, 0.95f)),
-		new Variant("deepslate tiles", cased(
-				Blocks.DEEPSLATE_TILE_SLAB, 1.06f, Blocks.DEEPSLATE_TILE_SLAB, 0.9f,
-				Blocks.CHISELED_DEEPSLATE, 0.8f, Blocks.DEEPSLATE_TILE_SLAB, 0.95f)),
+		new Variant("deepslate plates", swap(Blocks.POLISHED_DEEPSLATE, COLUMN)),
+		new Variant("blackstone plates", swap(Blocks.POLISHED_BLACKSTONE, COLUMN)),
+		new Variant("basalt plates", swap(Blocks.SMOOTH_BASALT, COLUMN)),
+		new Variant("chiseled column", swap(PLATE, Blocks.CHISELED_STONE_BRICKS)),
+		new Variant("chiseled deepslate column", swap(PLATE, Blocks.CHISELED_DEEPSLATE)),
+		new Variant("slab plates (no squash)", new Profile()
+				.plate(Blocks.POLISHED_DEEPSLATE_SLAB, 1.0f, 0.5f)
+				.even(COLUMN, 0.8f)
+				.plate(Blocks.POLISHED_DEEPSLATE_SLAB, 0.95f, 0.475f)
+				.cased()),
 	};
 
 	private PlinthShape() {
