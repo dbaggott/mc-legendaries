@@ -143,20 +143,36 @@ public final class PlinthShape {
 	}
 
 	/**
+	 * The plinth, as a function of what it is made of.
+	 *
+	 * <p>One copy of the numbers, so a variant differs from the live shape in exactly the block it
+	 * names and nothing can drift between them.
+	 *
+	 * <p><strong>The base is wider than the cap, and that is what makes them look equal.</strong>
+	 * They were both 1.0 and the base read as narrower, because silhouette is not what the eye
+	 * measures here: the cap's widest plate shows its whole top face, while the base's showed a
+	 * ledge of 0.05 peeking from under the plate above it. Widening the base gives it a top face to
+	 * be seen by. The reference the shape is modelled on does the same thing.
+	 */
+	private static Tier[] profile(Block plate, Block column) {
+		return new Profile()
+				.plate(plate, 1.14f, 0.16f)
+				.plate(plate, 0.98f, 0.10f)
+				.even(column, 0.8f)
+				.plate(plate, 0.86f, 0.06f)
+				.plate(plate, 0.9f, 0.10f)
+				.plate(plate, 1.0f, 0.14f)
+				.cased();
+	}
+
+	/**
 	 * The pedestal as it actually stands, glass case included.
 	 *
 	 * <p>A stepped foot, a lodestone column, a stepped cap and the case. The steps are what make it
 	 * read as a plinth rather than a post, and they are only affordable because plates are squashed
 	 * — six of them together cost half a block of height, where six slabs would cost three.
 	 */
-	public static final Tier[] LIVE = new Profile()
-			.plate(PLATE, 1.0f, 0.12f)
-			.plate(PLATE, 0.9f, 0.10f)
-			.even(COLUMN, 0.8f)
-			.plate(PLATE, 0.86f, 0.06f)
-			.plate(PLATE, 0.9f, 0.10f)
-			.plate(PLATE, 1.0f, 0.14f)
-			.cased();
+	public static final Tier[] LIVE = profile(PLATE, COLUMN);
 
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
 	public static final float CASE_CENTRE_Y = caseCentre();
@@ -196,18 +212,6 @@ public final class PlinthShape {
 	public record Variant(String label, Tier[] tiers) {
 	}
 
-	/** The live profile with one thing swapped, so a candidate is judged beside what it would replace. */
-	private static Tier[] swap(Block plate, Block column) {
-		return new Profile()
-				.plate(plate, 1.0f, 0.12f)
-				.plate(plate, 0.9f, 0.10f)
-				.even(column, 0.8f)
-				.plate(plate, 0.86f, 0.06f)
-				.plate(plate, 0.9f, 0.10f)
-				.plate(plate, 1.0f, 0.14f)
-				.cased();
-	}
-
 	/**
 	 * The candidates {@code /legendaries debug plinths} stands in a row, so a shape can be judged
 	 * beside the alternatives rather than on its own.
@@ -218,11 +222,11 @@ public final class PlinthShape {
 	 */
 	public static final Variant[] VARIANTS = {
 		new Variant("live", LIVE),
-		new Variant("deepslate plates", swap(Blocks.POLISHED_DEEPSLATE, COLUMN)),
-		new Variant("blackstone plates", swap(Blocks.POLISHED_BLACKSTONE, COLUMN)),
-		new Variant("basalt plates", swap(Blocks.SMOOTH_BASALT, COLUMN)),
-		new Variant("chiseled column", swap(PLATE, Blocks.CHISELED_STONE_BRICKS)),
-		new Variant("chiseled deepslate column", swap(PLATE, Blocks.CHISELED_DEEPSLATE)),
+		new Variant("deepslate plates", profile(Blocks.POLISHED_DEEPSLATE, COLUMN)),
+		new Variant("blackstone plates", profile(Blocks.POLISHED_BLACKSTONE, COLUMN)),
+		new Variant("basalt plates", profile(Blocks.SMOOTH_BASALT, COLUMN)),
+		new Variant("chiseled column", profile(PLATE, Blocks.CHISELED_STONE_BRICKS)),
+		new Variant("chiseled deepslate column", profile(PLATE, Blocks.CHISELED_DEEPSLATE)),
 		new Variant("slab plates (no squash)", new Profile()
 				.plate(Blocks.POLISHED_DEEPSLATE_SLAB, 1.0f, 0.5f)
 				.even(COLUMN, 0.8f)
