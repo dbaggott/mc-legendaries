@@ -163,18 +163,30 @@ public final class Pedestal {
 	 * Counting alone only notices a tier being added or removed; a different block, a different
 	 * scale or a resized click target leaves the count untouched, so the old pedestal stood
 	 * unchanged and the change reached only worlds that had never seen one.
+	 *
+	 * <p><strong>The case is recognised by {@link #CASE_TAG}, never inferred from the block-display
+	 * total.</strong> This has to agree with {@link #clearCase}, which discards by that tag — a case
+	 * the tag does not cover is one the pedestal can never take down, and a total cannot tell such a
+	 * case from a plinth tier. Counting the tag makes that pedestal fail here instead, where a
+	 * rebuild repairs it, and it catches a duplicate case that leaves the total right.
 	 */
 	private static boolean structureIntact(ServerLevel level, BlockPos pos, LegendaryState state) {
 		int plinths = 0;
+		int cases = 0;
 		int targets = 0;
 		int displays = 0;
 		for (Entity entity : ours(level, pos)) {
 			if (!entity.entityTags().contains(SHAPE_TAG)) {
 				return false;
 			}
+			boolean partOfCase = entity.entityTags().contains(CASE_TAG);
 			if (entity instanceof Display.BlockDisplay) {
-				plinths++;
-			} else if (entity instanceof Interaction) {
+				if (partOfCase) {
+					cases++;
+				} else {
+					plinths++;
+				}
+			} else if (entity instanceof Interaction && partOfCase) {
 				targets++;
 			} else if (entity instanceof Display.ItemDisplay) {
 				displays++;
@@ -182,8 +194,9 @@ public final class Pedestal {
 		}
 		// The case and its click target are a pair, standing exactly while a legendary does.
 		int occupants = state.onPedestal().size();
-		int cases = occupants == 0 ? 0 : 1;
-		return plinths == PlinthShape.PLINTH.length + cases && targets == cases && displays == occupants;
+		int expectedCase = occupants == 0 ? 0 : 1;
+		return plinths == PlinthShape.PLINTH.length && cases == expectedCase && targets == expectedCase
+				&& displays == occupants;
 	}
 
 	/** Puts a legendary on the pedestal, building it first if it somehow is not there. */
