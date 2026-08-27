@@ -69,19 +69,55 @@ public final class MoltenBlast {
 	private static final float BLAST_PITCH = 0.5f;
 
 	/**
-	 * The crater crackling as it cools: beats of campfire crackle scattered across the sphere the
-	 * blast just cleared, each quieter than the last until they stop.
+	 * The quench under the boom: {@code block.fire.extinguish}, the hiss vanilla uses for water
+	 * meeting fire, layered on the same instant as the explosion.
+	 *
+	 * <p>Under the boom's volume so it is heard as part of it rather than beside it, and far under
+	 * the pitch vanilla plays it at — a hiss that high reads as a doused candle, and what this is
+	 * standing for is a sphere of molten rock going out at once.
+	 */
+	private static final float QUENCH_VOLUME = 3.0f;
+	private static final float QUENCH_PITCH = 0.6f;
+
+	/**
+	 * The front of the boom: {@code item.firecharge.use}, the whoosh of a fireball catching, on the
+	 * same instant as the explosion it opens.
+	 *
+	 * <p>Pitched under vanilla's own use of it, as everything here is, but above the boom and the
+	 * quench rather than with them — an ignition buried in the register of the body it opens is one
+	 * nobody hears, and this is the only layer with a transient sharp enough to cut.
+	 */
+	private static final float IGNITION_VOLUME = 3.0f;
+	private static final float IGNITION_PITCH = 0.7f;
+
+	/**
+	 * The crater settling as it cools: lava pops scattered across the sphere the blast just cleared,
+	 * thinning and quietening together until they stop.
 	 *
 	 * <p>Scattered rather than sounded at the centre because the crater is a volume, and one source
-	 * in the middle of a wide one sounds like a point. Faded rather than cut so the crater settles
-	 * instead of falling silent between one tick and the next. Pitched under default for the same
-	 * reason the boom is: a big fire is a low one.
+	 * in the middle of a wide one sounds like a point. Pitched under default for the same reason
+	 * the boom is: a big fire is a low one, and spread around that so a dozen plays of one sample
+	 * do not read as one sample a dozen times.
+	 *
+	 * <p>Two constraints shape the rest of this, and both are easy to write past.
+	 *
+	 * <p>The fade exists only because this volume stays at or under {@code 1.0}. A volume is
+	 * clamped to that before it becomes gain; past it the number buys audible RANGE instead. A
+	 * settle quietening from a larger figure is therefore one every listener hears at a flat
+	 * level, however carefully the fall is written — and the cost of keeping it real is that every
+	 * pop carries only the 16 blocks a volume of 1.0 buys, rather than the crater being heard
+	 * cooling from across a valley.
+	 *
+	 * <p>The sound has to be a SHORT one. A thinning rate is heard as thinning only where each play
+	 * finishes before the next begins; against a sample longer than the gaps between them they pile
+	 * into one flat wash that ends by running out rather than fading. A lava pop is 0.15s where a
+	 * campfire crackle is 2.3 to 3.9.
 	 */
-	private static final int SETTLE_BEATS = 4;
-	private static final int SETTLE_TICKS_PER_BEAT = 12;
-	private static final int SETTLE_SOURCES_PER_BEAT = 4;
-	private static final float SETTLE_VOLUME = 3.0f;
+	private static final int SETTLE_TICKS = 20;
+	private static final float SETTLE_POPS_PER_TICK = 1.5f;
+	private static final float SETTLE_VOLUME = 1.0f;
 	private static final float SETTLE_PITCH = 0.8f;
+	private static final float SETTLE_PITCH_SPREAD = 0.3f;
 
 	/**
 	 * What the blast does to anything caught in it: two and a half hearts, in health points.
@@ -125,15 +161,15 @@ public final class MoltenBlast {
 	/**
 	 * A crater still cooling, and where in the world it is.
 	 *
-	 * <p>Held rather than sounded along with the boom because the beats have to land on later ticks
+	 * <p>Held rather than sounded along with the boom because the pops have to land on later ticks
 	 * than the blast did. The level travels with it, since two players in two dimensions can have
 	 * craters cooling at once, and so does the radius the blast was fired at — the knob can be
-	 * turned while one is still crackling.
+	 * turned while one is still popping.
 	 */
 	private record Crater(ServerLevel level, Vec3 centre, int blastRadius, int firedTick) {
 	}
 
-	/** Craters still cooling, drained by {@link #settle} as each sounds its last beat. */
+	/** Craters still cooling, drained by {@link #settle} as each reaches the end of its window. */
 	private static final List<Crater> COOLING = new ArrayList<>();
 
 	private MoltenBlast() {
@@ -253,7 +289,7 @@ public final class MoltenBlast {
 	 * <p>{@code sendParticles} and {@code playSound} on a {@link ServerLevel} are both
 	 * server-to-client packets, so this reaches a vanilla client with nothing installed — which is
 	 * the property the whole mod is built around. A blast only modded clients could see or hear
-	 * would be worse than none, and it is why the sound is a vanilla one: anything of ours would
+	 * would be worse than none, and it is why the sounds are vanilla ones: anything of ours would
 	 * need a resource pack on every client.
 	 *
 	 * <p>{@code EXPLOSION_EMITTER} is the single large bloom TNT uses; the scattered
@@ -270,12 +306,19 @@ public final class MoltenBlast {
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.0);
 		level.sendParticles(ParticleTypes.FLAME, origin.x, origin.y, origin.z, EXPLOSION_PUFFS * 2,
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.05);
+		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.FIRECHARGE_USE,
+				SoundSource.BLOCKS, IGNITION_VOLUME, IGNITION_PITCH);
 		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.GENERIC_EXPLODE,
 				SoundSource.BLOCKS, BLAST_VOLUME, BLAST_PITCH);
+		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.FIRE_EXTINGUISH,
+				SoundSource.BLOCKS, QUENCH_VOLUME, QUENCH_PITCH);
 	}
 
 	/**
-	 * Sounds a beat for every crater due one this tick, and forgets each once its last beat lands.
+	 * Burns every cooling crater one tick further along, and forgets each once its window is up.
+	 *
+	 * <p>Every crater still held is burned on every tick of that window; how much of it lands is
+	 * {@link #settleTick}'s to read off the fade, so nothing here schedules anything.
 	 *
 	 * <p>A server tick handler because a sound has to be emitted on the server thread, and because
 	 * the tick count is the same clock the crater recorded when it was fired.
@@ -286,11 +329,11 @@ public final class MoltenBlast {
 			Crater crater = cooling.next();
 			int elapsed = server.getTickCount() - crater.firedTick();
 			// A blast fires earlier in the same tick this handler ends, so the first pass over a
-			// fresh crater sees no elapsed time at all — that moment is the boom's, not a beat's.
-			if (elapsed > 0 && elapsed % SETTLE_TICKS_PER_BEAT == 0) {
-				crackle(crater, elapsed / SETTLE_TICKS_PER_BEAT);
+			// fresh crater sees no elapsed time at all — that moment is the boom's, not the burn's.
+			if (elapsed > 0 && elapsed < SETTLE_TICKS) {
+				settleTick(crater, 1.0f - (float) elapsed / SETTLE_TICKS);
 			}
-			if (elapsed >= SETTLE_BEATS * SETTLE_TICKS_PER_BEAT) {
+			if (elapsed >= SETTLE_TICKS) {
 				cooling.remove();
 			}
 		}
@@ -300,22 +343,33 @@ public final class MoltenBlast {
 	 * Drops every crater still cooling, for a server on its way out.
 	 *
 	 * <p>Both halves of what a crater holds go with that server: its level stops being a live world,
-	 * and the tick count its beats are measured against restarts from zero on the next one.
+	 * and the tick count its pops are measured against restarts from zero on the next one.
 	 */
 	public static void forgetCoolingCraters() {
 		COOLING.clear();
 	}
 
-	/** One beat of the settling burn, scattered across the crater and quieter the later it falls. */
-	private static void crackle(Crater crater, int beat) {
+	/**
+	 * One tick of the settling burn: pops scattered across the crater, thinning and quietening
+	 * together as {@code fade} runs from one down to none.
+	 *
+	 * <p>Scattered in time as well as in space. A fixed group of pops on a fixed cadence is a
+	 * rhythm, and a rhythm in something meant to be rock cooling is heard as a stutter — so how
+	 * many land in a tick is a rate rather than a count, and the fractional part of it decides a
+	 * coin toss. That toss is what lets the rate fall below one pop a tick and keep scattering
+	 * rather than rounding to nothing and cutting the tail off early.
+	 */
+	private static void settleTick(Crater crater, float fade) {
 		ServerLevel level = crater.level();
 		RandomSource random = level.getRandom();
-		float volume = SETTLE_VOLUME * (float) (SETTLE_BEATS - beat + 1) / SETTLE_BEATS;
-		for (int source = 0; source < SETTLE_SOURCES_PER_BEAT; source++) {
+		float rate = SETTLE_POPS_PER_TICK * fade;
+		int pops = (int) rate + (random.nextFloat() < rate - (int) rate ? 1 : 0);
+		for (int pop = 0; pop < pops; pop++) {
 			Vec3 at = crater.centre().add(scatter(random, crater.blastRadius()),
 					scatter(random, crater.blastRadius()), scatter(random, crater.blastRadius()));
-			level.playSound(null, at.x, at.y, at.z, SoundEvents.CAMPFIRE_CRACKLE,
-					SoundSource.BLOCKS, volume, SETTLE_PITCH);
+			float pitch = SETTLE_PITCH + (random.nextFloat() - 0.5f) * SETTLE_PITCH_SPREAD;
+			level.playSound(null, at.x, at.y, at.z, SoundEvents.LAVA_POP,
+					SoundSource.BLOCKS, SETTLE_VOLUME * fade, pitch);
 		}
 	}
 
