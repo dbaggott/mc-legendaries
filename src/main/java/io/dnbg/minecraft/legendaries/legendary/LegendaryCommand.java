@@ -31,12 +31,15 @@ import net.minecraft.world.item.ItemStack;
  * <p>{@code pedestal} exists because the pedestal's position is stored rather than derived — world
  * spawn is only its initial siting, and without a way to move it that "stored" would be a
  * distinction with no difference. {@code item} hands out and takes back legendaries, ignoring the
- * one-per-world rule on purpose. {@code config} turns the ability knobs, so tuning a blast is a
- * command and a swing rather than an edit, a rebuild and a relaunch.
+ * one-per-world rule on purpose. {@code config} turns the ability knobs — and names the ability
+ * rather than its carrier, because that is what they belong to — so tuning a blast is a command and
+ * a swing rather than an edit, a rebuild and a relaunch.
  */
 public final class LegendaryCommand {
 	private static final DynamicCommandExceptionType UNKNOWN_LEGENDARY = new DynamicCommandExceptionType(
 			name -> Component.literal("No legendary called '" + name + "'"));
+	private static final DynamicCommandExceptionType UNKNOWN_ABILITY = new DynamicCommandExceptionType(
+			name -> Component.literal("No ability called '" + name + "'"));
 	private static final DynamicCommandExceptionType UNKNOWN_SETTING = new DynamicCommandExceptionType(
 			name -> Component.literal("No setting called '" + name + "'"));
 	private static final String NOT_LOADED =
@@ -95,18 +98,18 @@ public final class LegendaryCommand {
 												})))))
 				.then(Commands.literal("config")
 						.then(Commands.literal("get")
-								.then(legendaryArg()
+								.then(abilityArg()
 										.executes(context -> reportSettings(context.getSource(),
-												namedLegendary(context)))))
+												namedAbility(context)))))
 						.then(Commands.literal("set")
-								.then(legendaryArg()
+								.then(abilityArg()
 										.then(Commands.argument("setting", StringArgumentType.word())
 												.suggests((context, builder) -> SharedSuggestionProvider.suggest(
 														Arrays.stream(LegendarySetting.values())
 																.map(LegendarySetting::commandName), builder))
 												.then(Commands.argument("value", IntegerArgumentType.integer())
 														.executes(context -> setSetting(context.getSource(),
-																namedLegendary(context), namedSetting(context),
+																namedAbility(context), namedSetting(context),
 																IntegerArgumentType.getInteger(context, "value"))))))));
 	}
 
@@ -114,6 +117,30 @@ public final class LegendaryCommand {
 		return Commands.argument("legendary", StringArgumentType.word())
 				.suggests((context, builder) -> SharedSuggestionProvider.suggest(
 						Arrays.stream(Legendary.values()).map(Legendary::commandName), builder));
+	}
+
+	/**
+	 * {@code config} names the ABILITY, not the legendary carrying it.
+	 *
+	 * <p>Which is what the settings belong to: two carriers of one ability tune together, so naming
+	 * a carrier would ask which of them the answer was about. Every name this accepts has settings by
+	 * construction, so there is no "that one has no ability to configure" to answer.
+	 */
+	private static RequiredArgumentBuilder<CommandSourceStack, String> abilityArg() {
+		return Commands.argument("ability", StringArgumentType.word())
+				.suggests((context, builder) -> SharedSuggestionProvider.suggest(
+						Arrays.stream(Ability.values()).map(Ability::commandName), builder));
+	}
+
+	private static Ability namedAbility(CommandContext<CommandSourceStack> context)
+			throws CommandSyntaxException {
+		String name = StringArgumentType.getString(context, "ability");
+		for (Ability ability : Ability.values()) {
+			if (ability.commandName().equals(name)) {
+				return ability;
+			}
+		}
+		throw UNKNOWN_ABILITY.create(name);
 	}
 
 	private static Legendary namedLegendary(CommandContext<CommandSourceStack> context)
@@ -249,17 +276,13 @@ public final class LegendaryCommand {
 		throw UNKNOWN_SETTING.create(name);
 	}
 
-	/** Lists every setting for one legendary, with the value actually in force. */
-	private static int reportSettings(CommandSourceStack source, Legendary legendary) {
-		if (!legendary.hasAbility()) {
-			source.sendFailure(Component.literal(legendary.displayName() + " has no ability to configure"));
-			return 0;
-		}
+	/** Lists every setting for one ability, with the value actually in force. */
+	private static int reportSettings(CommandSourceStack source, Ability ability) {
 		LegendaryState state = LegendaryState.get(source.getServer());
-		StringBuilder report = new StringBuilder(legendary.displayName() + ":");
+		StringBuilder report = new StringBuilder(ability.displayName() + ":");
 		for (LegendarySetting setting : LegendarySetting.values()) {
 			report.append("\n  ").append(setting.commandName()).append(" = ")
-					.append(state.setting(legendary, setting)).append(' ').append(setting.unit());
+					.append(state.setting(ability, setting)).append(' ').append(setting.unit());
 		}
 		String text = report.toString();
 		source.sendSuccess(() -> Component.literal(text), false);
@@ -271,23 +294,18 @@ public final class LegendaryCommand {
 	 *
 	 * <p>Bounds are the setting's own rather than the argument type's, so the message can say what
 	 * the limit is and why a value was refused. A new {@code cooldown} reaches a wait already
-	 * running rather than only the next one; {@link AbilityCooldown} holds that rule.
+	 * running rather than only the next one, and needs nothing here to make it: {@link
+	 * AbilityCooldown} reads the setting rather than a copy of it, on every pass.
 	 */
-	private static int setSetting(CommandSourceStack source, Legendary legendary, LegendarySetting setting,
+	private static int setSetting(CommandSourceStack source, Ability ability, LegendarySetting setting,
 			int value) {
-		if (!legendary.hasAbility()) {
-			source.sendFailure(Component.literal(legendary.displayName() + " has no ability to configure"));
-			return 0;
-		}
 		if (value < setting.min() || value > setting.max()) {
 			source.sendFailure(Component.literal(setting.commandName() + " must be between "
 					+ setting.min() + " and " + setting.max() + " " + setting.unit()));
 			return 0;
 		}
-		MinecraftServer server = source.getServer();
-		LegendaryState.get(server).setSetting(legendary, setting, value);
-		AbilityCooldown.settingChanged(server, legendary, setting);
-		source.sendSuccess(() -> Component.literal(legendary.displayName() + " " + setting.commandName()
+		LegendaryState.get(source.getServer()).setSetting(ability, setting, value);
+		source.sendSuccess(() -> Component.literal(ability.displayName() + " " + setting.commandName()
 				+ " set to " + value + " " + setting.unit()), true);
 		// One setting changed — a count, in the same currency as every other command here, because
 		// this is what `execute store result` reads.

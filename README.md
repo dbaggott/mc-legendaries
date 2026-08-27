@@ -92,7 +92,11 @@ the blast is centred on you, so charging you for it would tax every use.
 
 Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
 or the Nether roof. Nothing drops; a sphere that size is over two hundred blocks and would bury you in items. **60 second
-cooldown**, shown on the item.
+cooldown**, counted down above your hotbar.
+
+The countdown is the ability's, not the mace's. Nothing is drawn on the item — the wait belongs to
+the Molten Blast, so anything else that comes to carry it shares the one wait and the one countdown,
+and shows it in a place a worn item could never reach. Reconnecting clears a wait.
 
 It is centred on you and it does not care that you are standing there. Expect to fall.
 
@@ -110,20 +114,21 @@ It is centred on you and it does not care that you are standing there. Expect to
 ```
 
 ```
-/legendaries config get <name>                # what its ability is tuned to
-/legendaries config set <name> <setting> <n>  # cooldown (seconds), radius (blocks),
-                                              #   unmelted (percent), knockback (percent)
+/legendaries config get <ability>                # what that ability is tuned to
+/legendaries config set <ability> <setting> <n>  # cooldown (seconds), radius (blocks),
+                                                 #   unmelted (percent), knockback (percent)
 ```
 
-`<name>` is `netherite_spear` or `mace`, tab-completed; so is `<setting>`.
+`<ability>` is `molten_blast`, tab-completed; so is `<setting>`. It names the **ability** rather than
+the item carrying it, because that is what the settings belong to — two carriers of one ability tune
+together.
 
 **`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
-rebuild and a relaunch. Values persist with the world, `radius` is capped at 16 because cost grows
-with its cube, and a legendary with no ability says so rather than storing a number nothing reads.
-`cooldown` is measured from your last swing against whatever the setting says now, so a new value
-reaches a wait already counting down — shortening it past the time already elapsed ends that wait
-there and then, and lengthening it can put the mace back on cooldown after the old wait had run
-out.
+rebuild and a relaunch. Values persist with the world, and `radius` is capped at 16 because cost
+grows with its cube. `cooldown` is measured from your last swing against whatever the setting says
+now, so a new value reaches a wait already counting down — shortening it past the time already
+elapsed ends that wait there and then, and lengthening it can put the ability back on cooldown after
+the old wait had run out.
 
 **`item give` ignores the one-per-world rule** — that is what it is for, whether you are recovering
 a legendary lost to something the backstop could not catch or testing a change. It does not mark the

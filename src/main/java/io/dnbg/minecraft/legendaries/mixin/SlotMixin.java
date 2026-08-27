@@ -1,8 +1,9 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
+import io.dnbg.minecraft.legendaries.legendary.Actionbar;
 import io.dnbg.minecraft.legendaries.legendary.Legendary;
-import io.dnbg.minecraft.legendaries.legendary.LegendaryRules;
 import io.dnbg.minecraft.legendaries.legendary.LegendaryState;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -75,7 +76,7 @@ public abstract class SlotMixin {
 		if (server == null || !LegendaryState.get(server).crafted(legendary)) {
 			return;
 		}
-		LegendaryRules.refuse(player, legendary.displayName() + " has already been crafted.");
+		Actionbar.say(player, Component.literal(legendary.displayName() + " has already been crafted."));
 		cir.setReturnValue(false);
 	}
 }
