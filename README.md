@@ -79,7 +79,7 @@ plain ones. It is unbreakable.
 **Sneak and right-click** to erase every block within four of you — in all directions, including
 straight down — and turn the shell left behind into molten rock. It goes off with an explosion
 burst, flames, and a boom that carries the fireball's ignition and the hiss of the whole sphere
-going out with it. The crater then crackles for about a second as it cools.
+going out with it. The crater then pops its way quiet over about a second as it cools.
 
 Everything inside the radius goes. What varies is the lining: each shell block becomes magma,
 netherrack or coal, bar the **15%** left as it is — so the crater's edge shows the ground it was cut

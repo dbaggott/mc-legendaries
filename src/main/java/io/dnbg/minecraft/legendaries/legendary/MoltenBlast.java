@@ -91,18 +91,32 @@ public final class MoltenBlast {
 	private static final float IGNITION_PITCH = 0.7f;
 
 	/**
-	 * The crater crackling as it cools: beats of campfire crackle scattered across the sphere the
-	 * blast just cleared, each quieter than the last until they stop.
+	 * The crater settling as it cools: beats of lava pop scattered across the sphere the blast just
+	 * cleared, each quieter than the last until they stop.
 	 *
 	 * <p>Scattered rather than sounded at the centre because the crater is a volume, and one source
-	 * in the middle of a wide one sounds like a point. Faded rather than cut so the crater settles
-	 * instead of falling silent between one tick and the next. Pitched under default for the same
-	 * reason the boom is: a big fire is a low one.
+	 * in the middle of a wide one sounds like a point. Pitched under default for the same reason
+	 * the boom is: a big fire is a low one.
+	 *
+	 * <p>Two constraints shape the rest of this, and both are easy to write past.
+	 *
+	 * <p>The fade exists only because these volumes stay at or under {@code 1.0}. A volume is
+	 * clamped to that before it becomes gain; past it the number buys audible RANGE instead. A
+	 * settle stepping down from a larger figure is therefore one every listener hears at a flat
+	 * level, however carefully the steps are written — and the cost of keeping it real is that
+	 * every beat carries the 16 blocks a volume of 1.0 buys, rather than the crater being heard
+	 * cooling from across a valley.
+	 *
+	 * <p>The sound has to be a SHORT one. A beat reads as a step down from the one before it only
+	 * once that one has finished, so against a sample longer than the spacing every beat is still
+	 * sounding when the last lands, and the steps pile into one flat wash that ends by running out
+	 * rather than fading. A lava pop is 0.15s where a campfire crackle is 2.3 to 3.9, which is what
+	 * leaves room for five beats inside a second.
 	 */
-	private static final int SETTLE_BEATS = 3;
-	private static final int SETTLE_TICKS_PER_BEAT = 6;
-	private static final int SETTLE_SOURCES_PER_BEAT = 4;
-	private static final float SETTLE_VOLUME = 3.0f;
+	private static final int SETTLE_BEATS = 5;
+	private static final int SETTLE_TICKS_PER_BEAT = 4;
+	private static final int SETTLE_SOURCES_PER_BEAT = 3;
+	private static final float SETTLE_VOLUME = 1.0f;
 	private static final float SETTLE_PITCH = 0.8f;
 
 	/**
@@ -314,7 +328,7 @@ public final class MoltenBlast {
 			// A blast fires earlier in the same tick this handler ends, so the first pass over a
 			// fresh crater sees no elapsed time at all — that moment is the boom's, not a beat's.
 			if (elapsed > 0 && elapsed % SETTLE_TICKS_PER_BEAT == 0) {
-				crackle(crater, elapsed / SETTLE_TICKS_PER_BEAT);
+				settleBeat(crater, elapsed / SETTLE_TICKS_PER_BEAT);
 			}
 			if (elapsed >= SETTLE_BEATS * SETTLE_TICKS_PER_BEAT) {
 				cooling.remove();
@@ -333,14 +347,14 @@ public final class MoltenBlast {
 	}
 
 	/** One beat of the settling burn, scattered across the crater and quieter the later it falls. */
-	private static void crackle(Crater crater, int beat) {
+	private static void settleBeat(Crater crater, int beat) {
 		ServerLevel level = crater.level();
 		RandomSource random = level.getRandom();
 		float volume = SETTLE_VOLUME * (float) (SETTLE_BEATS - beat + 1) / SETTLE_BEATS;
 		for (int source = 0; source < SETTLE_SOURCES_PER_BEAT; source++) {
 			Vec3 at = crater.centre().add(scatter(random, crater.blastRadius()),
 					scatter(random, crater.blastRadius()), scatter(random, crater.blastRadius()));
-			level.playSound(null, at.x, at.y, at.z, SoundEvents.CAMPFIRE_CRACKLE,
+			level.playSound(null, at.x, at.y, at.z, SoundEvents.LAVA_POP,
 					SoundSource.BLOCKS, volume, SETTLE_PITCH);
 		}
 	}
