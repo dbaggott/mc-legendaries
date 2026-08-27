@@ -162,10 +162,27 @@ public final class PlinthShape {
 	public static final float CASE_CENTRE_Y = caseCentre();
 
 	/**
-	 * Applied on top of the item's own GROUND transform, which already renders it at dropped size.
-	 * Above 1 to lift it off that baseline, because a dropped item alone is small inside the case.
+	 * How wide an item is at GROUND, in blocks.
+	 *
+	 * <p>Not a guess: {@code models/item/generated.json} gives the {@code ground} display transform
+	 * a scale of 0.5, and {@code handheld} — which every legendary so far uses — inherits it. So an
+	 * item rendered at GROUND and left alone is half a block across.
 	 */
-	public static final float ITEM_SCALE = 1.6f;
+	private static final float GROUND_WIDTH = 0.5f;
+
+	/** How much of the case's width the item spans, leaving the rest as air around it. */
+	private static final float CASE_FILL = 0.7f;
+
+	/**
+	 * Applied on top of the item's own GROUND transform, so the item sits <em>inside</em> the case.
+	 *
+	 * <p>Derived from the case rather than chosen, because the two are the same decision: an item
+	 * wider than the glass around it reads as impaled on the pedestal rather than displayed in it,
+	 * and a hard-coded scale goes stale the moment {@link #CASE_SCALE} moves. This was 1.6 — half a
+	 * block scaled up to 0.8, inside a 0.7 case, which is how it came to be bigger than the box
+	 * holding it.
+	 */
+	public static final float ITEM_SCALE = CASE_SCALE * CASE_FILL / GROUND_WIDTH;
 
 	private static float caseCentre() {
 		for (Tier tier : LIVE) {
