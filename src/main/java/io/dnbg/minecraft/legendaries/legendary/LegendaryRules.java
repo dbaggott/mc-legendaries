@@ -51,6 +51,7 @@ public final class LegendaryRules {
 		raisePedestalOnce();
 		ServerEntityEvents.ENTITY_LOAD.register(Pedestal::discardStaleOnLoad);
 		spinPedestal();
+		settleCraters();
 		grantCarriedEffects();
 		wireMoltenBlast();
 		wireEntityInteractions();
@@ -105,6 +106,12 @@ public final class LegendaryRules {
 	/** Keeps the legendaries turning on their pedestal. */
 	private static void spinPedestal() {
 		ServerTickEvents.END_SERVER_TICK.register(Pedestal::spin);
+	}
+
+	/** Keeps a blast's crater crackling as it cools, and drops the unfinished ones on shutdown. */
+	private static void settleCraters() {
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> MoltenBlast.forgetCoolingCraters());
+		ServerTickEvents.END_SERVER_TICK.register(MoltenBlast::settle);
 	}
 
 	private static void grantCarriedEffects() {
