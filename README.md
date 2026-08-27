@@ -83,9 +83,10 @@ netherrack or coal, bar the **15%** left as it is — so the crater's edge shows
 from rather than a uniform coat. That share is `unmelted`, and `config` turns it.
 
 Everything else alive inside the radius takes **two and a half hearts**, armour does not soften it,
-and it is thrown clear as hard as **a stick of TNT** — hardest at the centre, fading to nothing
-eight blocks out, and softened by blast protection the way an explosion is. You are the exception to
-both: the blast is centred on you, so charging you for it would tax every use.
+and it is thrown clear as hard as **two sticks of TNT** — hardest at the centre, fading to nothing
+eight blocks out, and softened by blast protection the way an explosion is. That strength is
+`knockback`, counted in hundredths of a stick, and `config` turns it. You are the exception to both:
+the blast is centred on you, so charging you for it would tax every use.
 
 Bedrock and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor
 or the Nether roof. Nothing drops; a sphere that size is over two hundred blocks and would bury you in items. **60 second
@@ -108,7 +109,8 @@ It is centred on you and it does not care that you are standing there. Expect to
 
 ```
 /legendaries config get <name>                # what its ability is tuned to
-/legendaries config set <name> <setting> <n>  # cooldown (seconds), radius (blocks), unmelted (percent)
+/legendaries config set <name> <setting> <n>  # cooldown (seconds), radius (blocks),
+                                              #   unmelted (percent), knockback (percent)
 ```
 
 `<name>` is `netherite_spear` or `mace`, tab-completed; so is `<setting>`.

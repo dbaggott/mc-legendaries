@@ -93,13 +93,6 @@ public final class MoltenBlast {
 	private static final float BLAST_DAMAGE = 5.0f;
 
 	/**
-	 * How hard the blast throws what it catches, in sticks of TNT.
-	 *
-	 * <p>One, and literally so: this is a single stick's impulse, unmultiplied.
-	 */
-	private static final double KNOCKBACK_TNT = 1.0;
-
-	/**
 	 * How far a stick of TNT still throws, in blocks: twice its explosion radius of four, which is
 	 * the span vanilla's impulse falls off over.
 	 *
@@ -158,6 +151,7 @@ public final class MoltenBlast {
 		LegendaryState state = LegendaryState.get(server);
 		int blastRadius = state.setting(Legendary.MACE, LegendarySetting.RADIUS);
 		int unmelted = state.setting(Legendary.MACE, LegendarySetting.UNMELTED);
+		int knockback = state.setting(Legendary.MACE, LegendarySetting.KNOCKBACK);
 		// One block of reach past the crater, which is where the shell can be.
 		int shellRadius = blastRadius + 1;
 		BlockPos centre = player.blockPosition();
@@ -167,7 +161,7 @@ public final class MoltenBlast {
 		announce(level, centre, blastRadius);
 		COOLING.add(new Crater(level, middleOf(centre), blastRadius, server.getTickCount()));
 		// Before the ground goes, while everything caught in it is still standing where it was.
-		engulf(level, player, centre, blastRadius);
+		engulf(level, player, centre, blastRadius, knockback);
 
 		// Pass one: erase the crater. No drops — the sphere runs to hundreds of blocks and grows with
 		// the cube of the radius, so dropping them would bury the player in item entities and cost
@@ -213,7 +207,8 @@ public final class MoltenBlast {
 	 * because an entity is a point and a block is not — rounding to the block would spare something
 	 * standing just inside the edge and burn something just outside it.
 	 */
-	private static void engulf(ServerLevel level, Player player, BlockPos centre, int blastRadius) {
+	private static void engulf(ServerLevel level, Player player, BlockPos centre, int blastRadius,
+			int knockback) {
 		DamageSource source = new DamageSource(
 				level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(MOLTEN_BLAST), player);
 		double reachSqr = (double) blastRadius * blastRadius;
@@ -223,18 +218,19 @@ public final class MoltenBlast {
 				candidate -> candidate != player && !candidate.isSpectator()
 						&& candidate.distanceToSqr(origin) <= reachSqr)) {
 			victim.hurtServer(level, source, BLAST_DAMAGE);
-			hurl(victim, origin);
+			hurl(victim, origin, knockback);
 		}
 	}
 
 	/**
-	 * Throws one victim clear of the centre, as hard as a stick of TNT would.
+	 * Throws one victim clear of the centre, as hard as {@code knockback} hundredths of a stick of
+	 * TNT would — the unit {@link LegendarySetting#KNOCKBACK} is turned in.
 	 *
-	 * <p>Vanilla's own explosion impulse: a linear falloff from the centre out to TNT's reach, along
-	 * the line from the centre to the victim's eyes rather than their feet, so something standing on
-	 * the blast goes up as well as out. What it drops is vanilla's line-of-sight term,
-	 * because the sphere between the two is about to be air and there is nothing left to shelter
-	 * behind.
+	 * <p>Vanilla's own explosion impulse, scaled by that: a linear falloff from the centre out to
+	 * TNT's reach, along the line from the centre to the victim's eyes rather than their feet, so
+	 * something standing on the blast goes up as well as out. What it drops is vanilla's
+	 * line-of-sight term, because the sphere between the two is about to be air and there is nothing
+	 * left to shelter behind.
 	 *
 	 * <p>A thrown player is handed the impulse directly, because a push alone only reaches the
 	 * server's copy of their motion. What sends that copy back to the player it belongs to is the
@@ -246,11 +242,12 @@ public final class MoltenBlast {
 	 * push to them either, so withholding the packet is what leaves an admin watching a blast from
 	 * above where they were.
 	 */
-	private static void hurl(LivingEntity victim, Vec3 centre) {
+	private static void hurl(LivingEntity victim, Vec3 centre, int knockback) {
+		double sticks = (double) knockback / PERCENT;
 		double falloff = Math.max(1.0 - Math.sqrt(victim.distanceToSqr(centre)) / TNT_KNOCKBACK_REACH, 0.0);
 		double resistance = victim.getAttributeValue(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE);
 		Vec3 outward = victim.getEyePosition().subtract(centre).normalize();
-		victim.push(outward.scale(KNOCKBACK_TNT * falloff * (1.0 - resistance)));
+		victim.push(outward.scale(sticks * falloff * (1.0 - resistance)));
 		if (victim instanceof ServerPlayer thrown && !(thrown.isCreative() && thrown.getAbilities().flying)) {
 			thrown.connection.send(new ClientboundSetEntityMotionPacket(thrown));
 		}

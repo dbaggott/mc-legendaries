@@ -30,7 +30,16 @@ public enum LegendarySetting {
 	 * <p>0 coats the crater in a uniform lining and 100 leaves it as ordinary rock. What the knob is
 	 * really tuning is how much of the ground a crater was cut from still shows in its edge.
 	 */
-	UNMELTED(15, 0, 100, "percent");
+	UNMELTED(15, 0, 100, "percent"),
+
+	/**
+	 * How hard an ability throws what it catches, as a percent of one stick of TNT's impulse.
+	 *
+	 * <p>Percent rather than sticks because this is tuned by feel, and whole sticks would leave two
+	 * usable settings below the default. 1000 is a bound on how far a mistyped digit can go rather
+	 * than a measured ceiling; nobody has looked at what a server makes of an impulse that size.
+	 */
+	KNOCKBACK(200, 0, 1000, "percent");
 
 	private final int defaultValue;
 	private final int min;
