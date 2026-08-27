@@ -80,6 +80,17 @@ public final class MoltenBlast {
 	private static final float QUENCH_PITCH = 0.6f;
 
 	/**
+	 * The front of the boom: {@code item.firecharge.use}, the whoosh of a fireball catching, on the
+	 * same instant as the explosion it opens.
+	 *
+	 * <p>Pitched under vanilla's own use of it, as everything here is, but above the boom and the
+	 * quench rather than with them — an ignition buried in the register of the body it opens is one
+	 * nobody hears, and this is the only layer with a transient sharp enough to cut.
+	 */
+	private static final float IGNITION_VOLUME = 3.0f;
+	private static final float IGNITION_PITCH = 0.7f;
+
+	/**
 	 * The crater crackling as it cools: beats of campfire crackle scattered across the sphere the
 	 * blast just cleared, each quieter than the last until they stop.
 	 *
@@ -281,6 +292,8 @@ public final class MoltenBlast {
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.0);
 		level.sendParticles(ParticleTypes.FLAME, origin.x, origin.y, origin.z, EXPLOSION_PUFFS * 2,
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.05);
+		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.FIRECHARGE_USE,
+				SoundSource.BLOCKS, IGNITION_VOLUME, IGNITION_PITCH);
 		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.GENERIC_EXPLODE,
 				SoundSource.BLOCKS, BLAST_VOLUME, BLAST_PITCH);
 		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.FIRE_EXTINGUISH,
