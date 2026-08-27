@@ -72,10 +72,9 @@ public final class MoltenBlast {
 	 * <p><strong>Its {@code message_id} is deliberately a vanilla one.</strong> The id becomes the
 	 * translation key, and this mod is built so a vanilla client needs nothing installed — so a key
 	 * of our own would reach most players as the literal string
-	 * {@code death.attack.molten_blast.player}. Borrowing {@code explosion} gets "was blown up by",
-	 * which is both true and already in every client's language file. The borrowed id carries none
-	 * of {@code explosion}'s behaviour: armor bypassing comes from the tag, and vanilla explosion
-	 * damage does not bypass armor at all.
+	 * {@code death.attack.molten_blast}. {@code explosion} is the closest true one every client
+	 * already has. The borrowed id carries none of {@code explosion}'s behaviour: armor bypassing
+	 * comes from the tag, and vanilla explosion damage does not bypass armor at all.
 	 */
 	private static final ResourceKey<DamageType> MOLTEN_BLAST = ResourceKey.create(
 			Registries.DAMAGE_TYPE, Identifier.fromNamespaceAndPath("legendaries", "molten_blast"));
