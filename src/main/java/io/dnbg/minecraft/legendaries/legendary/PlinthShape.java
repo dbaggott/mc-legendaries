@@ -186,19 +186,39 @@ public final class PlinthShape {
 	 */
 	private static final float GROUND_WIDTH = 0.5f;
 
-	/** How much of the case's width the item spans, leaving the rest as air around it. */
-	private static final float CASE_FILL = 0.7f;
+	/** How much of the case's width the whole row of legendaries spans, leaving the rest as air. */
+	private static final float CASE_FILL = 0.95f;
 
 	/**
-	 * Applied on top of the item's own GROUND transform, so the item sits <em>inside</em> the case.
+	 * How much of its own slot a legendary fills, so two of them do not touch.
+	 */
+	private static final float SLOT_FILL = 0.85f;
+
+	/**
+	 * The width one legendary gets, for a case holding {@code slots} of them.
 	 *
-	 * <p>Derived from the case rather than chosen, because the two are the same decision: an item
-	 * wider than the glass around it reads as impaled on the pedestal rather than displayed in it,
-	 * and a hard-coded scale goes stale the moment {@link #CASE_SCALE} moves. This was 1.6 — half a
-	 * block scaled up to 0.8, inside a 0.7 case, which is how it came to be bigger than the box
+	 * <p><strong>The spread and the scale are one decision, which is why they are computed
+	 * together.</strong> A fixed spread and a separately chosen scale is what put a spear's tip
+	 * outside the glass: two items 0.49 wide at ±0.2 reach 0.445, where the case reaches 0.35, and
+	 * they overlap in the middle besides. Dividing the row among the slots means the legendaries
+	 * always fit however many there are — a third one narrows all three rather than throwing the
+	 * outer two out of the case.
+	 */
+	public static float slotWidth(int slots) {
+		return CASE_SCALE * CASE_FILL / slots;
+	}
+
+	/**
+	 * Applied on top of the item's own GROUND transform, so the legendary sits inside the case.
+	 *
+	 * <p>Derived rather than chosen, for the same reason as {@link #slotWidth}: a hard-coded scale
+	 * goes stale the moment the case moves or a legendary is added. This was 1.6 — half a block
+	 * scaled up to 0.8, inside a 0.7 case — which is how the item came to be wider than the box
 	 * holding it.
 	 */
-	public static final float ITEM_SCALE = CASE_SCALE * CASE_FILL / GROUND_WIDTH;
+	public static float itemScale(int slots) {
+		return slotWidth(slots) * SLOT_FILL / GROUND_WIDTH;
+	}
 
 	private static float caseCentre() {
 		for (Tier tier : LIVE) {

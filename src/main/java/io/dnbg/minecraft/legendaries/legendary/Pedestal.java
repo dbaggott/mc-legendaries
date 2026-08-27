@@ -54,7 +54,6 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
-	private static final double SLOT_SPREAD = 0.4;
 	private static final float INTERACTION_SIZE = 1.6f;
 	private static final double SEARCH_RADIUS = 3.0;
 
@@ -220,15 +219,18 @@ public final class Pedestal {
 			return;
 		}
 		// Slots are spread along X by enum order so two legendaries do not occupy the same point.
-		double offset = (legendary.ordinal() - (Legendary.values().length - 1) / 2.0) * SLOT_SPREAD;
+		// The width of a slot comes from the case, so however many legendaries there are they are
+		// laid out inside the glass rather than spilling out of it.
+		int slots = Legendary.values().length;
+		double offset = (legendary.ordinal() - (slots - 1) / 2.0) * PlinthShape.slotWidth(slots);
 		shown.snapTo(pos.getX() + 0.5 + offset, pos.getY() + PlinthShape.CASE_CENTRE_Y, pos.getZ() + 0.5,
 				0.0f, 0.0f);
 		// Rendered exactly as a dropped item is. GROUND is the model's own transform for lying on
 		// the floor, so the legendary in the case is the shape players already know, at the size the
 		// model itself specifies — rather than a held item scaled by a number somebody guessed.
 		shown.getEntityData().set(ItemDisplayAccessor.itemDisplayId(), ItemDisplayContext.GROUND.getId());
-		shown.getEntityData().set(DisplayTransformAccessor.scaleId(),
-				new Vector3f(PlinthShape.ITEM_SCALE, PlinthShape.ITEM_SCALE, PlinthShape.ITEM_SCALE));
+		float scale = PlinthShape.itemScale(slots);
+		shown.getEntityData().set(DisplayTransformAccessor.scaleId(), new Vector3f(scale, scale, scale));
 		shown.getSlot(0).set(stack);
 		shown.addTag(TAG);
 		shown.addTag(SLOT_TAG_PREFIX + legendary.name());
