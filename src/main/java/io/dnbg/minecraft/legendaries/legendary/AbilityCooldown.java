@@ -45,12 +45,17 @@ public final class AbilityCooldown {
 	private static final int SECONDS_PER_MINUTE = 60;
 
 	/**
-	 * The colour the time itself is drawn in — vanilla's own for {@link
-	 * net.minecraft.world.item.Rarity#RARE}, which is what an enchanted item's name is written in.
+	 * The two colours the line is written in: the ability's name, then the time left.
 	 *
-	 * <p>Only the time carries it. The ability's name is a label that never changes and the time is
-	 * the part worth looking at, so colouring the whole line would spend the distinction on nothing.
+	 * <p>The name is a label that never changes and the time is the part worth looking at, so the
+	 * label recedes and the value carries the only saturated colour on the line. Nothing punctuates
+	 * the two halves, which is what makes the contrast between them load-bearing rather than
+	 * decorative — two strong colours side by side would leave the line with no focus.
+	 *
+	 * <p>{@link ChatFormatting#AQUA} is vanilla's own for {@link
+	 * net.minecraft.world.item.Rarity#RARE}, which is what an enchanted item's name is written in.
 	 */
+	private static final ChatFormatting NAME_COLOUR = ChatFormatting.GRAY;
 	private static final ChatFormatting REMAINING_COLOUR = ChatFormatting.AQUA;
 
 	/**
@@ -59,6 +64,10 @@ public final class AbilityCooldown {
 	 * <p>A second, because that is the unit it is read in and there is nothing new to say in
 	 * between. It also has to be short enough to keep the message out of the client's fade, which
 	 * {@link Actionbar} documents; a second is comfortably inside it.
+	 *
+	 * <p>The sweep itself runs every tick regardless. A wait ends on whichever tick it ends on, and
+	 * taking the countdown down on that tick rather than on the next multiple of this is the whole
+	 * reason the two cadences are separate.
 	 */
 	private static final int REFRESH_TICKS = TICKS_PER_SECOND;
 
@@ -95,22 +104,24 @@ public final class AbilityCooldown {
 	}
 
 	/**
-	 * Puts every running wait on its owner's screen, and forgets the ones that have run out.
+	 * Puts every running wait on its owner's screen, and takes it down as each runs out.
 	 *
-	 * <p>A wait that ends says nothing: the countdown reaching its last second and going is the whole
-	 * of it. Players who are offline are skipped, and hold no record to be stale by the time they are
+	 * <p>A wait that ends says nothing, and does not linger either: a message the server has stopped
+	 * re-sending still has the rest of its time on screen to serve, so the last second read would sit
+	 * there over an ability that is already back. Ending it is a positive act, which is what
+	 * {@link Actionbar#clear} is for.
+	 *
+	 * <p>Players who are offline are skipped, and hold no record to be stale by the time they are
 	 * back.
 	 */
 	public static void showWaits(MinecraftServer server) {
-		if (server.getTickCount() % REFRESH_TICKS != 0) {
-			return;
-		}
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			EnumMap<Ability, Integer> waits = firedAt.get(player);
 			if (waits == null) {
 				continue;
 			}
 			Component showing = null;
+			boolean ended = false;
 			Iterator<Map.Entry<Ability, Integer>> running = waits.entrySet().iterator();
 			while (running.hasNext()) {
 				Map.Entry<Ability, Integer> wait = running.next();
@@ -118,31 +129,38 @@ public final class AbilityCooldown {
 				int remaining = cooldownTicks(server, ability) - elapsed(server, wait.getValue());
 				if (remaining <= 0) {
 					running.remove();
+					ended = true;
 				} else if (showing == null) {
-					showing = Component.literal(ability.displayName() + " — ")
+					showing = Component.literal(ability.displayName() + " ").withStyle(NAME_COLOUR)
 							.append(Component.literal(remainingText(remaining)).withStyle(REMAINING_COLOUR));
 				}
 			}
-			if (showing != null) {
+			if (showing == null) {
+				if (ended) {
+					Actionbar.clear(player);
+				}
+			} else if (server.getTickCount() % REFRESH_TICKS == 0) {
 				Actionbar.hold(player, showing);
 			}
 		}
 	}
 
 	/**
-	 * What is left, as a player reads it: seconds up to a minute, and minutes and seconds past one.
+	 * What is left, as a player reads it: bare seconds under a minute, minutes and seconds at or over
+	 * one — so a wait passing the minute mark reads {@code 1m 1s}, {@code 1m 0s}, {@code 59s}.
 	 *
-	 * <p>Rounded up, so a wait never reads as over while any of it is left — which also means the
-	 * minute mark reads as {@code 1m} rather than spending its first second reading {@code 60s}.
+	 * <p>The seconds are kept at every whole minute rather than dropped, because dropping them is
+	 * what would put {@code 1m} between {@code 1m 1s} and {@code 59s} — a step that reads as a jump
+	 * back up. A minute is a point the countdown passes through, not a place it arrives at.
+	 *
+	 * <p>Rounded up, so a wait never reads as over while any of it is left.
 	 */
 	private static String remainingText(int ticks) {
 		int seconds = (ticks + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND;
-		if (seconds <= SECONDS_PER_MINUTE) {
+		if (seconds < SECONDS_PER_MINUTE) {
 			return seconds + "s";
 		}
-		int rest = seconds % SECONDS_PER_MINUTE;
-		return rest == 0 ? seconds / SECONDS_PER_MINUTE + "m"
-				: seconds / SECONDS_PER_MINUTE + "m " + rest + "s";
+		return seconds / SECONDS_PER_MINUTE + "m " + seconds % SECONDS_PER_MINUTE + "s";
 	}
 
 	private static int elapsed(MinecraftServer server, int firedTick) {

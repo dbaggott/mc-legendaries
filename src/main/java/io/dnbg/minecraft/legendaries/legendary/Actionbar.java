@@ -70,6 +70,17 @@ public final class Actionbar {
 		send(player, message);
 	}
 
+	/**
+	 * Takes an ambient line down, for when what it was stating has stopped being true.
+	 *
+	 * <p>An empty message rather than a shorter life: how long a message stays is the client's to
+	 * decide and nothing on the server can shorten it, so replacing one is the only way to end it
+	 * early. Yields to a {@link #say} for the same reason {@link #hold} does.
+	 */
+	public static void clear(ServerPlayer player) {
+		hold(player, Component.empty());
+	}
+
 	private static void send(ServerPlayer player, Component message) {
 		player.sendSystemMessage(message, true);
 	}
