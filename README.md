@@ -49,12 +49,12 @@ registers `netherite_spear` as fire-resistant. Anything that would genuinely
 destroy it — an explosion, a cactus, the void — or leaving it on the ground
 until it despawns puts it back on its **pedestal**: a non-collidable stone
 plinth that stands at world spawn from the moment a world is created, empty
-until something comes home, and can be moved afterwards. Right-click it to take
-one back.
+until something comes home, and can be moved afterwards. Right-click the glass to
+take one back.
 
 A purple glass case sits on top, narrower than the cap so it reads as set down
-there, and whatever the pedestal is holding floats inside it, rendered with the
-item's own dropped-item model.
+there, and whatever the pedestal is holding turns slowly inside it, rendered with
+the item's own dropped-item model.
 
 The plinth is display entities rather than placed blocks, so there is nothing to
 mine, nothing to grief and nothing to walk into.

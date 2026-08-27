@@ -186,9 +186,9 @@ public final class PlinthShape {
 	 * <p>The case is what a player aims at — it is the thing with a legendary visibly inside it —
 	 * so it is the whole of what answers a right-click. The plinth under it is scenery.
 	 *
-	 * <p>Read off the shape rather than written down twice. The target was a hard-coded 1.6 square
-	 * and the plinth grew past it, leaving the top of the case unclickable; taking the numbers from
-	 * the case means it cannot come adrift again.
+	 * <p>Read off the shape rather than written down twice. A target written as its own constant
+	 * does not follow the plinth when the plinth changes, and what that leaves is a case whose top
+	 * is not clickable — visibly the thing to aim at, and inert.
 	 */
 	public static final float CASE_BOTTOM_Y = CASE_TIER.bottomY();
 
@@ -229,10 +229,9 @@ public final class PlinthShape {
 	/**
 	 * Applied on top of the item's own GROUND transform, so the legendary sits inside the case.
 	 *
-	 * <p>Derived rather than chosen, for the same reason as {@link #slotWidth}: a hard-coded scale
-	 * goes stale the moment the case moves or a legendary is added. This was 1.6 — half a block
-	 * scaled up to 0.8, inside a 0.7 case — which is how the item came to be wider than the box
-	 * holding it.
+	 * <p>Derived rather than chosen, for the same reason as {@link #slotWidth}: a scale written down
+	 * separately goes stale the moment the case moves or a legendary is added, and a legendary wider
+	 * than the glass around it reads as impaled on the pedestal rather than displayed in it.
 	 */
 	public static float itemScale(int slots) {
 		return slotWidth(slots) * SLOT_FILL / GROUND_WIDTH;
