@@ -4,10 +4,12 @@ import io.dnbg.minecraft.legendaries.Legendaries;
 import io.dnbg.minecraft.legendaries.mixin.BlockDisplayAccessor;
 import io.dnbg.minecraft.legendaries.mixin.DisplayTransformAccessor;
 import io.dnbg.minecraft.legendaries.mixin.InteractionAccessor;
+import io.dnbg.minecraft.legendaries.mixin.TextDisplayAccessor;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -50,29 +52,7 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
-	/**
-	 * The pedestal's shape, tier by tier: the block, how far each side is scaled, and how high the
-	 * tier's centre sits above the pedestal's block position.
-	 *
-	 * <p>A display renders its block full-size and centred on the entity, so a tier is a scale and
-	 * an offset rather than a position — the wide flat base and cap are the same cube squashed.
-	 */
-	private record Tier(Block block, float width, float height, float centreY) {
-	}
-
-	private static final Tier[] TIERS = {
-		// Dark foot and cap framing a lighter panelled shaft — the reference's contrast runs that
-		// way round, and lodestone's own texture is the panelling.
-		new Tier(Blocks.POLISHED_DEEPSLATE, 1.0f, 0.12f, 0.06f),
-		new Tier(Blocks.POLISHED_DEEPSLATE, 0.9f, 0.10f, 0.17f),
-		// Only slightly inset. A narrow shaft turns the whole thing into a spool; the reference is
-		// squat, barely wider at its foot than at its waist.
-		new Tier(Blocks.LODESTONE, 0.82f, 0.76f, 0.60f),
-		new Tier(Blocks.POLISHED_DEEPSLATE, 0.9f, 0.10f, 1.03f),
-		new Tier(Blocks.POLISHED_DEEPSLATE, 1.0f, 0.14f, 1.15f),
-	};
-
-	private static final double HOVER = 1.6;
+	private static final double HOVER = 1.95;
 	private static final double SLOT_SPREAD = 0.4;
 	private static final float INTERACTION_SIZE = 1.6f;
 	private static final double SEARCH_RADIUS = 3.0;
@@ -167,7 +147,7 @@ public final class Pedestal {
 				displays++;
 			}
 		}
-		return plinths == TIERS.length && targets == 1 && displays == state.onPedestal().size();
+		return plinths == PlinthShape.LIVE.length && targets == 1 && displays == state.onPedestal().size();
 	}
 
 	/** Puts a legendary on the pedestal, building it first if it somehow is not there. */
@@ -270,7 +250,28 @@ public final class Pedestal {
 	}
 
 	private static void buildFixtures(ServerLevel level, BlockPos pos) {
-		for (Tier tier : TIERS) {
+		buildTiers(level, pos, PlinthShape.LIVE, TAG);
+
+		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
+		if (click != null) {
+			click.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+			click.getEntityData().set(InteractionAccessor.widthId(), INTERACTION_SIZE);
+			click.getEntityData().set(InteractionAccessor.heightId(), INTERACTION_SIZE);
+			click.addTag(TAG);
+			level.addFreshEntity(click);
+		}
+	}
+
+	/**
+	 * Spawns one plinth's worth of block displays, carrying exactly the tags the caller asks for.
+	 *
+	 * <p>The caller supplies every tag, including {@link #TAG}. Adding that here would mean preview
+	 * plinths wore the real pedestal's tag, and {@link #discardStaleOnLoad} would delete them the
+	 * instant they spawned for standing somewhere the pedestal is not — which is that method doing
+	 * its job, on the wrong entities.
+	 */
+	public static void buildTiers(ServerLevel level, BlockPos pos, PlinthShape.Tier[] tiers, String... tags) {
+		for (PlinthShape.Tier tier : tiers) {
 			Display.BlockDisplay part = Pedestal.<Display.BlockDisplay>type("block_display")
 					.create(level, EntitySpawnReason.COMMAND);
 			if (part == null) {
@@ -287,18 +288,26 @@ public final class Pedestal {
 			part.getEntityData().set(DisplayTransformAccessor.translationId(),
 					new Vector3f(-tier.width() / 2.0f, tier.centreY() - tier.height() / 2.0f,
 							-tier.width() / 2.0f));
-			part.addTag(TAG);
+			for (String tag : tags) {
+				part.addTag(tag);
+			}
 			level.addFreshEntity(part);
 		}
+	}
 
-		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
-		if (click != null) {
-			click.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			click.getEntityData().set(InteractionAccessor.widthId(), INTERACTION_SIZE);
-			click.getEntityData().set(InteractionAccessor.heightId(), INTERACTION_SIZE);
-			click.addTag(TAG);
-			level.addFreshEntity(click);
+	/** Floats a line of text above a position, so a row of preview plinths can be told apart. */
+	public static void label(ServerLevel level, BlockPos pos, String text, String... tags) {
+		Display.TextDisplay label = Pedestal.<Display.TextDisplay>type("text_display")
+				.create(level, EntitySpawnReason.COMMAND);
+		if (label == null) {
+			return;
 		}
+		label.snapTo(pos.getX() + 0.5, pos.getY() + 2.4, pos.getZ() + 0.5, 0.0f, 0.0f);
+		label.getEntityData().set(TextDisplayAccessor.textId(), Component.literal(text));
+		for (String tag : tags) {
+			label.addTag(tag);
+		}
+		level.addFreshEntity(label);
 	}
 
 	/** Removes the pedestal's entities without touching the state's record of where it is. */

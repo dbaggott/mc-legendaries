@@ -103,6 +103,15 @@ It is centred on you and it does not care that you are standing there. Expect to
 
 `<name>` is `netherite_spear` or `mace`, tab-completed; so is `<setting>`.
 
+```
+/legendaries debug plinths                # build every candidate plinth shape in a labelled row
+/legendaries debug clear                  # remove them
+```
+
+Shapes are judged by looking, and looking at one per rebuild is slow. `debug plinths` puts every
+candidate in the world at once, each under its own label, so one screenshot settles which to keep.
+The candidates live in `PlinthShape.VARIANTS`; the one in use is `PlinthShape.LIVE`.
+
 **`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
 rebuild and a relaunch. Values persist with the world, `radius` is capped at 16 because cost grows
 with its cube, and a legendary with no ability says so rather than storing a number nothing reads.
