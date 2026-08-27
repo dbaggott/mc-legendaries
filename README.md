@@ -116,9 +116,10 @@ It is centred on you and it does not care that you are standing there. Expect to
 **`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
 rebuild and a relaunch. Values persist with the world, `radius` is capped at 16 because cost grows
 with its cube, and a legendary with no ability says so rather than storing a number nothing reads.
-A new `cooldown` reaches one already counting down: the wait is measured from the swing against
-whatever the setting says now, so shortening it past the time already elapsed ends the wait there
-and then.
+`cooldown` is measured from your last swing against whatever the setting says now, so a new value
+reaches a wait already counting down — shortening it past the time already elapsed ends that wait
+there and then, and lengthening it can put the mace back on cooldown after the old wait had run
+out.
 
 **`item give` ignores the one-per-world rule** — that is what it is for, whether you are recovering
 a legendary lost to something the backstop could not catch or testing a change. It does not mark the
