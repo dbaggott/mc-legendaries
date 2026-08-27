@@ -100,7 +100,7 @@ public final class MoltenBlast {
 	 * reason the boom is: a big fire is a low one.
 	 */
 	private static final int SETTLE_BEATS = 4;
-	private static final int SETTLE_TICKS_PER_BEAT = 12;
+	private static final int SETTLE_TICKS_PER_BEAT = 6;
 	private static final int SETTLE_SOURCES_PER_BEAT = 4;
 	private static final float SETTLE_VOLUME = 3.0f;
 	private static final float SETTLE_PITCH = 0.8f;
