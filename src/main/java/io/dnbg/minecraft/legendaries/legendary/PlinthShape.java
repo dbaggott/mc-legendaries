@@ -1,5 +1,7 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SlabBlock;
@@ -22,6 +24,17 @@ public final class PlinthShape {
 
 	private static final Block DARK = Blocks.POLISHED_DEEPSLATE;
 	private static final Block DARK_SLAB = Blocks.POLISHED_DEEPSLATE_SLAB;
+
+	/**
+	 * The case the legendary sits inside.
+	 *
+	 * <p>Looked up by id rather than named as a constant, for the same reason the entity types are:
+	 * {@code Blocks.PURPLE_STAINED_GLASS} exists in 26.1 and 26.1.2 and was replaced by the
+	 * {@code Blocks.STAINED_GLASS} colour collection in 26.2, so either spelling compiles against
+	 * half the supported range and fails on the other half.
+	 */
+	private static final Block CASE = BuiltInRegistries.BLOCK.getValue(
+			Identifier.withDefaultNamespace("purple_stained_glass"));
 
 	/** How tall this block is in its own right, before any scaling. */
 	private static float naturalHeight(Block block) {
@@ -52,11 +65,28 @@ public final class PlinthShape {
 		return tiers;
 	}
 
-	/** The pedestal as it actually stands. */
+	/**
+	 * The pedestal as it actually stands, glass case included.
+	 *
+	 * <p>The case is narrower than the cap it sits on, so it reads as set down on the plinth rather
+	 * than as another tier of it.
+	 */
 	public static final Tier[] LIVE = stack(
 			DARK_SLAB, 1.0f,
 			Blocks.LODESTONE, 0.8f,
-			DARK_SLAB, 0.95f);
+			DARK_SLAB, 0.95f,
+			CASE, 0.7f);
+
+	/** Where the item floats: the middle of the glass case, so it is held inside it. */
+	public static final float CASE_CENTRE_Y = caseCentre();
+
+	/** How large the item renders — near its dropped size, so it sits in the case with room around it. */
+	public static final float ITEM_SCALE = 0.45f;
+
+	private static float caseCentre() {
+		Tier top = LIVE[LIVE.length - 1];
+		return top.centreY();
+	}
 
 	public record Variant(String label, Tier[] tiers) {
 	}

@@ -52,7 +52,6 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
-	private static final double HOVER = 1.95;
 	private static final double SLOT_SPREAD = 0.4;
 	private static final float INTERACTION_SIZE = 1.6f;
 	private static final double SEARCH_RADIUS = 3.0;
@@ -220,7 +219,12 @@ public final class Pedestal {
 		}
 		// Slots are spread along X by enum order so two legendaries do not occupy the same point.
 		double offset = (legendary.ordinal() - (Legendary.values().length - 1) / 2.0) * SLOT_SPREAD;
-		shown.snapTo(pos.getX() + 0.5 + offset, pos.getY() + HOVER, pos.getZ() + 0.5, 0.0f, 0.0f);
+		shown.snapTo(pos.getX() + 0.5 + offset, pos.getY() + PlinthShape.CASE_CENTRE_Y, pos.getZ() + 0.5,
+				0.0f, 0.0f);
+		// Shrunk to roughly its dropped size, so it hangs inside the case with room around it
+		// rather than bursting through the glass.
+		shown.getEntityData().set(DisplayTransformAccessor.scaleId(),
+				new Vector3f(PlinthShape.ITEM_SCALE, PlinthShape.ITEM_SCALE, PlinthShape.ITEM_SCALE));
 		shown.getSlot(0).set(stack);
 		shown.addTag(TAG);
 		shown.addTag(SLOT_TAG_PREFIX + legendary.name());
