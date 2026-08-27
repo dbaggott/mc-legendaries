@@ -270,9 +270,8 @@ public final class LegendaryCommand {
 	 * Changes one setting.
 	 *
 	 * <p>Bounds are the setting's own rather than the argument type's, so the message can say what
-	 * the limit is and why a value was refused. A cooldown already counting down is not cleared —
-	 * the new value applies from the next use, and {@code cooldown 0} plus one swing is the way to
-	 * clear one now.
+	 * the limit is and why a value was refused. A new {@code cooldown} reaches a wait already
+	 * running rather than only the next one; {@link AbilityCooldown} holds that rule.
 	 */
 	private static int setSetting(CommandSourceStack source, Legendary legendary, LegendarySetting setting,
 			int value) {
@@ -285,7 +284,9 @@ public final class LegendaryCommand {
 					+ setting.min() + " and " + setting.max() + " " + setting.unit()));
 			return 0;
 		}
-		LegendaryState.get(source.getServer()).setSetting(legendary, setting, value);
+		MinecraftServer server = source.getServer();
+		LegendaryState.get(server).setSetting(legendary, setting, value);
+		AbilityCooldown.settingChanged(server, legendary, setting);
 		source.sendSuccess(() -> Component.literal(legendary.displayName() + " " + setting.commandName()
 				+ " set to " + value + " " + setting.unit()), true);
 		// One setting changed — a count, in the same currency as every other command here, because
