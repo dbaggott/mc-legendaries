@@ -255,12 +255,18 @@ public final class LegendaryRules {
 			if (!Legendary.MACE.is(held) || !player.isShiftKeyDown()) {
 				return InteractionResult.PASS;
 			}
-			if (player.getCooldowns().isOnCooldown(held)) {
-				return InteractionResult.FAIL;
-			}
 			if (level instanceof ServerLevel serverLevel) {
+				MinecraftServer server = serverLevel.getServer();
+				if (!AbilityCooldown.ready(server, player, Legendary.MACE)) {
+					return InteractionResult.FAIL;
+				}
 				MoltenBlast.fire(serverLevel, player);
-				player.getCooldowns().addCooldown(held, MoltenBlast.cooldownTicks(serverLevel.getServer()));
+				AbilityCooldown.begin(server, player, Legendary.MACE, held);
+			} else if (player.getCooldowns().isOnCooldown(held)) {
+				// A client has no settings to read, so the swipe the server sent it is the whole of
+				// what it knows about the wait. Refusing on that is what keeps the swing animation
+				// off a modded client mid-cooldown; a vanilla one swings and the server refuses.
+				return InteractionResult.FAIL;
 			}
 			// SUCCESS on both sides so the client plays the swing rather than waiting on the server.
 			return InteractionResult.SUCCESS;

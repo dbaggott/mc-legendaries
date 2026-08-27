@@ -31,7 +31,6 @@ import net.minecraft.world.phys.Vec3;
  * converted and then erased, leaving the crater edge ragged.
  */
 public final class MoltenBlast {
-	private static final int TICKS_PER_SECOND = 20;
 	/** setBlock flag: update neighbours and notify clients, the ordinary "a block changed" set. */
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
@@ -100,11 +99,6 @@ public final class MoltenBlast {
 			Registries.DAMAGE_TYPE, Identifier.fromNamespaceAndPath("legendaries", "molten_blast"));
 
 	private MoltenBlast() {
-	}
-
-	/** How long the mace waits between blasts, in ticks — configurable for testing. */
-	public static int cooldownTicks(MinecraftServer server) {
-		return LegendaryState.get(server).setting(Legendary.MACE, LegendarySetting.COOLDOWN) * TICKS_PER_SECOND;
 	}
 
 	/** Fires the blast, centred on the player. */
