@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SlabBlock;
 
 /**
- * The plinth's silhouette, and the candidates being compared against it.
+ * The plinth's silhouette.
  *
  * <p>A plinth is plates and a column: thin bands top and bottom, something with a face between
  * them. A display entity renders whatever block it is given at whatever scale it is given, so both
@@ -34,9 +34,8 @@ import net.minecraft.world.level.block.SlabBlock;
  * <p><strong>Squashing merges rows of the texture, so only a block whose rows resemble each other
  * may be a plate.</strong> A brick or tile pattern has strong row-to-row structure and turns to
  * mush; a flat or finely-speckled texture loses nothing you could name. {@link #PLATE} is the
- * darkest block in the stone family whose rows differ least — compare it against
- * {@code polished_deepslate}, which was the plate before and whose banding is visibly smeared at
- * these thicknesses.
+ * darkest block in the stone family whose rows differ least, which is why it survives a tenth of a
+ * block tall where {@code polished_deepslate}'s banding smears visibly.
  *
  * <p>So the prohibition is on stretching a block <em>chosen for its face</em>, not on stretching.
  * Anything with a motif — the column, the case — is {@link #even}. Only plates are squashed, and
@@ -130,39 +129,11 @@ public final class PlinthShape {
 			return this;
 		}
 
-		/**
-		 * Closes the profile with the glass case, so no profile can omit one.
-		 *
-		 * <p>Every profile getting a case is what makes {@link #VARIANTS} a like-for-like row rather
-		 * than plinths compared against bare stacks.
-		 */
+		/** Closes the profile with the glass case, so no profile can omit one. */
 		Tier[] cased() {
 			even(CASE, CASE_SCALE);
 			return tiers.toArray(new Tier[0]);
 		}
-	}
-
-	/**
-	 * The plinth, as a function of what it is made of.
-	 *
-	 * <p>One copy of the numbers, so a variant differs from the live shape in exactly the block it
-	 * names and nothing can drift between them.
-	 *
-	 * <p><strong>The base is wider than the cap, and that is what makes them look equal.</strong>
-	 * They were both 1.0 and the base read as narrower, because silhouette is not what the eye
-	 * measures here: the cap's widest plate shows its whole top face, while the base's showed a
-	 * ledge of 0.05 peeking from under the plate above it. Widening the base gives it a top face to
-	 * be seen by. The reference the shape is modelled on does the same thing.
-	 */
-	private static Tier[] profile(Block plate, Block column) {
-		return new Profile()
-				.plate(plate, 1.14f, 0.16f)
-				.plate(plate, 0.98f, 0.10f)
-				.even(column, 0.8f)
-				.plate(plate, 0.86f, 0.06f)
-				.plate(plate, 0.9f, 0.10f)
-				.plate(plate, 1.0f, 0.14f)
-				.cased();
 	}
 
 	/**
@@ -171,8 +142,21 @@ public final class PlinthShape {
 	 * <p>A stepped foot, a lodestone column, a stepped cap and the case. The steps are what make it
 	 * read as a plinth rather than a post, and they are only affordable because plates are squashed
 	 * — six of them together cost half a block of height, where six slabs would cost three.
+	 *
+	 * <p><strong>The base is wider than the cap, and that is what makes them look equal.</strong>
+	 * They were both 1.0 and the base read as narrower, because silhouette is not what the eye
+	 * measures here: the cap's widest plate shows its whole top face, while the base's showed a
+	 * ledge of 0.05 peeking from under the plate above it. Widening the base gives it a top face to
+	 * be seen by. The reference the shape is modelled on does the same thing.
 	 */
-	public static final Tier[] LIVE = profile(PLATE, COLUMN);
+	public static final Tier[] LIVE = new Profile()
+			.plate(PLATE, 1.14f, 0.16f)
+			.plate(PLATE, 0.98f, 0.10f)
+			.even(COLUMN, 0.8f)
+			.plate(PLATE, 0.86f, 0.06f)
+			.plate(PLATE, 0.9f, 0.10f)
+			.plate(PLATE, 1.0f, 0.14f)
+			.cased();
 
 	/** The case, found by block rather than by position in the table. */
 	private static final Tier CASE_TIER = caseTier();
@@ -268,31 +252,6 @@ public final class PlinthShape {
 		shape.append(CASE_BOTTOM_Y).append(':').append(CASE_SIZE);
 		return Integer.toHexString(shape.toString().hashCode());
 	}
-
-	public record Variant(String label, Tier[] tiers) {
-	}
-
-	/**
-	 * The candidates {@code /legendaries debug plinths} stands in a row, so a shape can be judged
-	 * beside the alternatives rather than on its own.
-	 *
-	 * <p>Each varies one thing against {@link #LIVE}: the plate block, or the column. The plate
-	 * candidates are the runners-up on the row-to-row measure, kept so the choice can be re-made by
-	 * eye rather than taken on the number's word.
-	 */
-	public static final Variant[] VARIANTS = {
-		new Variant("live", LIVE),
-		new Variant("deepslate plates", profile(Blocks.POLISHED_DEEPSLATE, COLUMN)),
-		new Variant("blackstone plates", profile(Blocks.POLISHED_BLACKSTONE, COLUMN)),
-		new Variant("basalt plates", profile(Blocks.SMOOTH_BASALT, COLUMN)),
-		new Variant("chiseled column", profile(PLATE, Blocks.CHISELED_STONE_BRICKS)),
-		new Variant("chiseled deepslate column", profile(PLATE, Blocks.CHISELED_DEEPSLATE)),
-		new Variant("slab plates (no squash)", new Profile()
-				.plate(Blocks.POLISHED_DEEPSLATE_SLAB, 1.0f, 0.5f)
-				.even(COLUMN, 0.8f)
-				.plate(Blocks.POLISHED_DEEPSLATE_SLAB, 0.95f, 0.475f)
-				.cased()),
-	};
 
 	private PlinthShape() {
 	}

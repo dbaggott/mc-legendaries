@@ -5,12 +5,10 @@ import io.dnbg.minecraft.legendaries.mixin.BlockDisplayAccessor;
 import io.dnbg.minecraft.legendaries.mixin.DisplayTransformAccessor;
 import io.dnbg.minecraft.legendaries.mixin.InteractionAccessor;
 import io.dnbg.minecraft.legendaries.mixin.ItemDisplayAccessor;
-import io.dnbg.minecraft.legendaries.mixin.TextDisplayAccessor;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -202,27 +200,40 @@ public final class Pedestal {
 	}
 
 	/**
-	 * Takes one legendary off the pedestal, chosen at random from those standing on it.
+	 * Takes one named legendary off the pedestal, or an empty stack if it is not standing there.
 	 *
 	 * <p>The stack comes off its item display rather than being rebuilt, so whatever it carried when
 	 * it arrived is what leaves. The pedestal itself stays standing — only what it holds changes.
+	 *
+	 * <p><strong>Empty covers "not there" and "cannot see yet" alike.</strong> The displays are read
+	 * through the world, so an unloaded entity index reads as an empty pedestal — a caller that must
+	 * not lose the item treats empty as a refusal rather than an absence, which is what
+	 * {@link LegendaryState#onPedestal(Legendary)} is for.
 	 */
-	public static ItemStack takeOne(MinecraftServer server) {
+	public static ItemStack take(MinecraftServer server, Legendary legendary) {
 		LegendaryState state = LegendaryState.get(server);
 		BlockPos pos = position(server, state);
 		ServerLevel level = LegendaryState.home(server);
-		List<ItemStack> held = heldStacks(level, pos);
+		for (ItemStack held : heldStacks(level, pos)) {
+			if (legendary.is(held)) {
+				clearSlot(level, pos, legendary);
+				state.setOnPedestal(legendary, false);
+				return held;
+			}
+		}
+		return ItemStack.EMPTY;
+	}
+
+	/** Takes one legendary off the pedestal, chosen at random from those standing on it. */
+	public static ItemStack takeOne(MinecraftServer server) {
+		ServerLevel level = LegendaryState.home(server);
+		List<ItemStack> held = heldStacks(level, position(server, LegendaryState.get(server)));
 		if (held.isEmpty()) {
 			return ItemStack.EMPTY;
 		}
-		ItemStack chosen = held.get(level.getRandom().nextInt(held.size()));
-		Legendary legendary = Legendary.of(chosen).orElse(null);
-		if (legendary == null) {
-			return ItemStack.EMPTY;
-		}
-		clearSlot(level, pos, legendary);
-		state.setOnPedestal(legendary, false);
-		return chosen;
+		return Legendary.of(held.get(level.getRandom().nextInt(held.size())))
+				.map(chosen -> take(server, chosen))
+				.orElse(ItemStack.EMPTY);
 	}
 
 	/**
@@ -325,7 +336,7 @@ public final class Pedestal {
 	}
 
 	private static void buildFixtures(ServerLevel level, BlockPos pos) {
-		buildTiers(level, pos, PlinthShape.LIVE, TAG, SHAPE_TAG);
+		buildTiers(level, pos, PlinthShape.LIVE);
 
 		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
 		if (click != null) {
@@ -342,15 +353,8 @@ public final class Pedestal {
 		}
 	}
 
-	/**
-	 * Spawns one plinth's worth of block displays, carrying exactly the tags the caller asks for.
-	 *
-	 * <p>The caller supplies every tag, including {@link #TAG}. Adding that here would mean preview
-	 * plinths wore the real pedestal's tag, and {@link #discardStaleOnLoad} would delete them the
-	 * instant they spawned for standing somewhere the pedestal is not — which is that method doing
-	 * its job, on the wrong entities.
-	 */
-	public static void buildTiers(ServerLevel level, BlockPos pos, PlinthShape.Tier[] tiers, String... tags) {
+	/** Spawns one plinth's worth of block displays, one per tier. */
+	private static void buildTiers(ServerLevel level, BlockPos pos, PlinthShape.Tier[] tiers) {
 		for (PlinthShape.Tier tier : tiers) {
 			Display.BlockDisplay part = Pedestal.<Display.BlockDisplay>type("block_display")
 					.create(level, EntitySpawnReason.COMMAND);
@@ -368,26 +372,10 @@ public final class Pedestal {
 			// width — and the vertical offset is simply where its underside goes.
 			part.getEntityData().set(DisplayTransformAccessor.translationId(),
 					new Vector3f(-tier.scaleX() / 2.0f, tier.bottomY(), -tier.scaleZ() / 2.0f));
-			for (String tag : tags) {
-				part.addTag(tag);
-			}
+			part.addTag(TAG);
+			part.addTag(SHAPE_TAG);
 			level.addFreshEntity(part);
 		}
-	}
-
-	/** Floats a line of text above a position, so a row of preview plinths can be told apart. */
-	public static void label(ServerLevel level, BlockPos pos, String text, String... tags) {
-		Display.TextDisplay label = Pedestal.<Display.TextDisplay>type("text_display")
-				.create(level, EntitySpawnReason.COMMAND);
-		if (label == null) {
-			return;
-		}
-		label.snapTo(pos.getX() + 0.5, pos.getY() + 2.4, pos.getZ() + 0.5, 0.0f, 0.0f);
-		label.getEntityData().set(TextDisplayAccessor.textId(), Component.literal(text));
-		for (String tag : tags) {
-			label.addTag(tag);
-		}
-		level.addFreshEntity(label);
 	}
 
 	/** Removes the pedestal's entities without touching the state's record of where it is. */

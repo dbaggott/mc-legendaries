@@ -19,9 +19,10 @@ It is unbreakable.
 
 **Sneak and right-click** to erase every block within four of you — all directions, including
 straight down — and turn the shell left behind into molten rock, with an explosion burst and flames.
-Everything inside the radius goes; each shell block draws from magma, netherrack, coal, or **left as
-it is** at weights 4 / 4 / 4 / 3, so one shell block in five keeps whatever it was made of. Bedrock and anything else
-vanilla marks unbreakable survives, so a blast cannot hole the world floor or the Nether roof.
+Everything inside the radius goes; each shell block becomes magma, netherrack or coal, bar the
+**15%** left as it is, which keeps the crater's edge showing the ground it was cut from. Bedrock
+and anything else vanilla marks unbreakable survives, so a blast cannot hole the world floor or the
+Nether roof.
 Nothing drops. Sixty second cooldown.
 
 It is centred on you and does not care that you are standing there. Expect to fall.

@@ -78,10 +78,9 @@ plain ones. It is unbreakable.
 straight down — and turn the shell left behind into molten rock. It goes off with an explosion burst
 and flames.
 
-Everything inside the radius goes. What varies is the lining: each shell block draws from magma,
-netherrack, coal, or **left as it is** at weights 4 / 4 / 4 / 3 — so one shell block in five keeps
-whatever it was made of, and the crater's edge shows the ground it was cut from rather than a
-uniform coat.
+Everything inside the radius goes. What varies is the lining: each shell block becomes magma,
+netherrack or coal, bar the **15%** left as it is — so the crater's edge shows the ground it was cut
+from rather than a uniform coat. That share is `unmelted`, and `config` turns it.
 
 Everything else alive inside the radius takes **two and a half hearts**, and armour does not
 soften it. You are the exception: the blast is centred on you, so charging you for it would tax
@@ -100,25 +99,18 @@ It is centred on you and it does not care that you are standing there. Expect to
 /legendaries pedestal here                # move it to where you are standing
 /legendaries pedestal at <x y z>          # move it to a specific block
 
-/legendaries item give <players> <name>   # hand out a legendary
-/legendaries item delete <players> <name> # take every copy back
+/legendaries item give <players> <name>    # hand out a legendary
+/legendaries item give pedestal <name>     # stand one in the case
+/legendaries item delete <players> <name>  # take every copy back
+/legendaries item delete pedestal <name>   # destroy the one in the case
 ```
 
 ```
 /legendaries config get <name>                # what its ability is tuned to
-/legendaries config set <name> <setting> <n>  # cooldown (seconds) or radius (blocks)
+/legendaries config set <name> <setting> <n>  # cooldown (seconds), radius (blocks), unmelted (percent)
 ```
 
 `<name>` is `netherite_spear` or `mace`, tab-completed; so is `<setting>`.
-
-```
-/legendaries debug plinths                # build every candidate plinth shape in a labelled row
-/legendaries debug clear                  # remove them
-```
-
-Shapes are judged by looking, and looking at one per rebuild is slow. `debug plinths` puts every
-candidate in the world at once, each under its own label, so one screenshot settles which to keep.
-The candidates live in `PlinthShape.VARIANTS`; the one in use is `PlinthShape.LIVE`.
 
 **`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
 rebuild and a relaunch. Values persist with the world, `radius` is capped at 16 because cost grows
@@ -134,6 +126,12 @@ The item is built by assembling that legendary's own recipe, so it is identical 
 If a duplicate is lost while the original is already home, it drops beside the pedestal rather than
 onto it — there is one display slot per legendary, and deleting the extra would make the command a
 way to destroy what it just handed out.
+
+**`pedestal` is a target on both**, wherever a player selector goes. `give pedestal` stands a
+legendary in the case, and is refused rather than dropped in the grass if that one is already
+standing there — there is a single slot per legendary. `delete pedestal` destroys what is in that
+slot and leaves the plinth — and refuses while the pedestal has not loaded, rather than clearing a
+slot it cannot see and stranding what is standing in it.
 
 Requires permission level 2. Moving an occupied pedestal carries whatever is on it.
 

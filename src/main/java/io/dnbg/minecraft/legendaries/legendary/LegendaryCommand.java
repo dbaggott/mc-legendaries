@@ -17,8 +17,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import java.util.ArrayList;
@@ -41,6 +39,8 @@ public final class LegendaryCommand {
 			name -> Component.literal("No legendary called '" + name + "'"));
 	private static final DynamicCommandExceptionType UNKNOWN_SETTING = new DynamicCommandExceptionType(
 			name -> Component.literal("No setting called '" + name + "'"));
+	private static final String NOT_LOADED =
+			"The pedestal has not loaded yet. Go and look at it, then try again.";
 
 	private LegendaryCommand() {
 	}
@@ -65,6 +65,10 @@ public final class LegendaryCommand {
 								.executes(context -> report(context.getSource()))))
 				.then(Commands.literal("item")
 						.then(Commands.literal("give")
+								.then(Commands.literal("pedestal")
+										.then(legendaryArg()
+												.executes(context -> giveToPedestal(context.getSource(),
+														namedLegendary(context)))))
 								.then(Commands.argument("players", EntityArgument.players())
 										.then(legendaryArg()
 												// Legendary first, players second: a mistyped name
@@ -77,6 +81,10 @@ public final class LegendaryCommand {
 															legendary);
 												}))))
 						.then(Commands.literal("delete")
+								.then(Commands.literal("pedestal")
+										.then(legendaryArg()
+												.executes(context -> deleteFromPedestal(context.getSource(),
+														namedLegendary(context)))))
 								.then(Commands.argument("players", EntityArgument.players())
 										.then(legendaryArg()
 												.executes(context -> {
@@ -85,11 +93,6 @@ public final class LegendaryCommand {
 															EntityArgument.getPlayers(context, "players"),
 															legendary);
 												})))))
-				.then(Commands.literal("debug")
-						.then(Commands.literal("plinths")
-								.executes(context -> showPlinths(context.getSource())))
-						.then(Commands.literal("clear")
-								.executes(context -> clearPlinths(context.getSource()))))
 				.then(Commands.literal("config")
 						.then(Commands.literal("get")
 								.then(legendaryArg()
@@ -135,10 +138,8 @@ public final class LegendaryCommand {
 	 * item is identical to a crafted one and cannot drift from it.
 	 */
 	private static int give(CommandSourceStack source, Collection<ServerPlayer> players, Legendary legendary) {
-		ItemStack template = legendary.create(source.getServer());
+		ItemStack template = template(source, legendary);
 		if (template.isEmpty()) {
-			source.sendFailure(Component.literal(
-					"No recipe for " + legendary.displayName() + " — a datapack may have removed it."));
 			return 0;
 		}
 		for (ServerPlayer player : players) {
@@ -170,45 +171,60 @@ public final class LegendaryCommand {
 		return total;
 	}
 
-	/** Tag on every preview plinth, so clearing them cannot touch the real one. */
-	private static final String PREVIEW_TAG = "legendaries_preview";
-	private static final int PREVIEW_SPACING = 3;
-
 	/**
-	 * Builds every candidate plinth in a row beside the caller, each under its own label.
+	 * Stands a legendary on the pedestal, the same way one being claimed back does.
 	 *
-	 * <p>Shapes are judged by looking, and looking at one per rebuild is slow. A row of them in one
-	 * screenshot collapses a morning of round trips into a single answer, and the labels are what
-	 * make that answer sayable — counting unlabelled plinths left to right is how the wrong one
-	 * gets picked.
+	 * <p>Refused when that legendary is already standing there. There is one slot per legendary, so
+	 * a second copy could only be dropped on the ground beside the pedestal, and an operator who
+	 * asked to put something <em>on</em> the pedestal is owed an answer rather than an item in the
+	 * grass.
 	 */
-	private static int showPlinths(CommandSourceStack source) {
-		ServerLevel level = source.getLevel();
-		BlockPos origin = BlockPos.containing(source.getPosition());
-		clearPlinths(source);
-		int i = 0;
-		for (PlinthShape.Variant variant : PlinthShape.VARIANTS) {
-			BlockPos at = origin.offset(i * PREVIEW_SPACING, 0, 0);
-			Pedestal.buildTiers(level, at, variant.tiers(), PREVIEW_TAG);
-			Pedestal.label(level, at, variant.label(), PREVIEW_TAG);
-			i++;
+	private static int giveToPedestal(CommandSourceStack source, Legendary legendary) {
+		MinecraftServer server = source.getServer();
+		if (LegendaryState.get(server).onPedestal(legendary)) {
+			source.sendFailure(Component.literal(legendary.displayName() + " is already on the pedestal"));
+			return 0;
 		}
-		int built = i;
-		source.sendSuccess(() -> Component.literal("Built " + built + " plinths running east from here"), false);
-		return built;
+		ItemStack template = template(source, legendary);
+		if (template.isEmpty()) {
+			return 0;
+		}
+		Pedestal.place(server, template);
+		source.sendSuccess(() -> Component.literal(
+				"Put " + legendary.displayName() + " on the pedestal"), true);
+		return 1;
 	}
 
-	private static int clearPlinths(CommandSourceStack source) {
-		int removed = 0;
-		for (Entity entity : source.getLevel().getEntities((Entity) null,
-				new AABB(BlockPos.containing(source.getPosition())).inflate(64.0),
-				e -> e.entityTags().contains(PREVIEW_TAG))) {
-			entity.discard();
-			removed++;
+	/** Destroys the legendary standing on the pedestal, leaving the pedestal itself standing. */
+	private static int deleteFromPedestal(CommandSourceStack source, Legendary legendary) {
+		MinecraftServer server = source.getServer();
+		if (!LegendaryState.get(server).onPedestal(legendary)) {
+			source.sendFailure(Component.literal(legendary.displayName() + " is not on the pedestal"));
+			return 0;
 		}
-		int total = removed;
-		source.sendSuccess(() -> Component.literal("Removed " + total + " preview entities"), false);
-		return total;
+		if (Pedestal.take(server, legendary).isEmpty()) {
+			// The state says it is standing there, so nothing to take means the pedestal has not
+			// loaded. Going on would clear the state and leave the display holding it stranded.
+			source.sendFailure(Component.literal(NOT_LOADED));
+			return 0;
+		}
+		source.sendSuccess(() -> Component.literal(
+				"Removed " + legendary.displayName() + " from the pedestal"), true);
+		return 1;
+	}
+
+	/**
+	 * Builds one legendary from its own recipe, or says why it cannot and hands back an empty stack.
+	 *
+	 * <p>Empty is the caller's cue to stop, and the message is already sent by then.
+	 */
+	private static ItemStack template(CommandSourceStack source, Legendary legendary) {
+		ItemStack template = legendary.create(source.getServer());
+		if (template.isEmpty()) {
+			source.sendFailure(Component.literal(
+					"No recipe for " + legendary.displayName() + " — a datapack may have removed it."));
+		}
+		return template;
 	}
 
 	private static LegendarySetting namedSetting(CommandContext<CommandSourceStack> context)
@@ -290,8 +306,7 @@ public final class LegendaryCommand {
 				// takeOne() refused rather than handing over an empty pedestal, so a legendary is still
 				// standing at the old site and the state still says so. Moving now would repoint the
 				// state away from it and the next chunk load would destroy it.
-				source.sendFailure(Component.literal(
-						"The pedestal has not loaded yet. Go and look at it, then try again."));
+				source.sendFailure(Component.literal(NOT_LOADED));
 				for (ItemStack back : carried) {
 					Pedestal.place(server, back);
 				}

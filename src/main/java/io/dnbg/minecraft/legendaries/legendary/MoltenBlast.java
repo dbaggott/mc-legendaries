@@ -32,22 +32,17 @@ public final class MoltenBlast {
 	private static final int BLOCK_UPDATE = Block.UPDATE_ALL;
 
 	/**
-	 * What a shell block becomes, and how often.
-	 *
-	 * <p>A {@code null} entry means <em>leave it as it is</em>. It is an outcome rather than a
-	 * separate skip so the mix stays in one table: retuning how much original rock shows through is
-	 * a weight change here, not a second concept somewhere else.
-	 *
-	 * <p>4:4:4:3 totals fifteen, putting leave-as-is at exactly three in fifteen — one shell block in
-	 * five keeps whatever it was made of, which is what stops the lining reading as a uniform coat.
+	 * What a melted shell block becomes, drawn from evenly. How much of the shell melts at all is
+	 * {@link LegendarySetting#UNMELTED}.
 	 *
 	 * <p>Nothing in this table may be a fluid. A fluid does not stay in the shell — it flows out of
 	 * the crater and keeps going, which turns a blast into a spreading mess.
 	 */
 	private static final Block[] SHELL = {
-		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK, null,
+		Blocks.MAGMA_BLOCK, Blocks.NETHERRACK, Blocks.COAL_BLOCK,
 	};
-	private static final int[] SHELL_WEIGHTS = {4, 4, 4, 3};
+
+	private static final int PERCENT = 100;
 
 	/** Explosion puffs across the crater, and flames clinging to each newly-molten shell block. */
 	private static final int EXPLOSION_PUFFS = 40;
@@ -90,7 +85,9 @@ public final class MoltenBlast {
 	/** Fires the blast, centred on the player. */
 	public static void fire(ServerLevel level, Player player) {
 		MinecraftServer server = level.getServer();
-		int blastRadius = LegendaryState.get(server).setting(Legendary.MACE, LegendarySetting.RADIUS);
+		LegendaryState state = LegendaryState.get(server);
+		int blastRadius = state.setting(Legendary.MACE, LegendarySetting.RADIUS);
+		int unmelted = state.setting(Legendary.MACE, LegendarySetting.UNMELTED);
 		// One block of reach past the crater, which is where the shell can be.
 		int shellRadius = blastRadius + 1;
 		BlockPos centre = player.blockPosition();
@@ -120,10 +117,10 @@ public final class MoltenBlast {
 					|| !bordersCrater(centre, pos, blastRadius)) {
 				continue;
 			}
-			Block molten = shellOutcome(random);
-			if (molten == null) {
+			if (random.nextInt(PERCENT) < unmelted) {
 				continue;
 			}
+			Block molten = SHELL[random.nextInt(SHELL.length)];
 			level.setBlock(pos, molten.defaultBlockState(), BLOCK_UPDATE);
 			// Flames on the face that looks into the crater, so the lining reads as freshly molten.
 			level.sendParticles(ParticleTypes.FLAME, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
@@ -178,23 +175,6 @@ public final class MoltenBlast {
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.0);
 		level.sendParticles(ParticleTypes.FLAME, x, y, z, EXPLOSION_PUFFS * 2,
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.05);
-	}
-
-	/** A weighted draw from {@link #SHELL}; null means leave the block as it is. */
-	private static Block shellOutcome(RandomSource random) {
-		int total = 0;
-		for (int weight : SHELL_WEIGHTS) {
-			total += weight;
-		}
-		int roll = random.nextInt(total);
-		for (int i = 0; i < SHELL.length; i++) {
-			roll -= SHELL_WEIGHTS[i];
-			if (roll < 0) {
-				return SHELL[i];
-			}
-		}
-		// Unreachable: roll is bounded by the same total the loop subtracts.
-		return null;
 	}
 
 	private static boolean within(BlockPos centre, BlockPos pos, int radius) {
