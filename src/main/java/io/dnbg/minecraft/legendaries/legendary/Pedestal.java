@@ -61,14 +61,21 @@ public final class Pedestal {
 	}
 
 	private static final Tier[] TIERS = {
-		new Tier(Blocks.POLISHED_ANDESITE, 1.0f, 0.25f, 0.125f),
-		new Tier(Blocks.LODESTONE, 0.75f, 1.0f, 0.75f),
-		new Tier(Blocks.POLISHED_ANDESITE, 1.0f, 0.25f, 1.375f),
+		// Stepped foot: a wide pad, then a narrower one, so the plinth grows out of the ground
+		// rather than sitting on it.
+		new Tier(Blocks.POLISHED_ANDESITE, 1.15f, 0.15f, 0.075f),
+		new Tier(Blocks.POLISHED_ANDESITE, 0.95f, 0.20f, 0.25f),
+		// The shaft is well inside the tiers above and below it — that inset is what makes the
+		// cap read as an overhang rather than as another slab in the stack.
+		new Tier(Blocks.LODESTONE, 0.62f, 1.05f, 0.875f),
+		// Cap, mirroring the foot so the silhouette is symmetrical top to bottom.
+		new Tier(Blocks.POLISHED_ANDESITE, 0.95f, 0.20f, 1.50f),
+		new Tier(Blocks.POLISHED_ANDESITE, 1.15f, 0.12f, 1.66f),
 	};
 
-	private static final double HOVER = 1.9;
+	private static final double HOVER = 2.05;
 	private static final double SLOT_SPREAD = 0.4;
-	private static final float INTERACTION_SIZE = 1.8f;
+	private static final float INTERACTION_SIZE = 2.0f;
 	private static final double SEARCH_RADIUS = 3.0;
 
 	private Pedestal() {
