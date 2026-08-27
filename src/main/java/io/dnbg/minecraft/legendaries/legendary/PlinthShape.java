@@ -1,5 +1,6 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import java.util.Arrays;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
@@ -84,17 +85,45 @@ public final class PlinthShape {
 		return tiers;
 	}
 
+	/** How wide the case is, as a fraction of a block. Narrower than the cap it sits on. */
+	private static final float CASE_SCALE = 0.7f;
+
+	/**
+	 * Appends the case to a profile, so no caller has to remember to and no profile can omit it.
+	 *
+	 * <p>The case being last is relied on nowhere: {@link #caseCentre} finds it by block. Every
+	 * profile gets one, which is what makes {@link #VARIANTS} a like-for-like comparison.
+	 */
+	private static Tier[] cased(Object... blockThenScale) {
+		Object[] all = Arrays.copyOf(blockThenScale, blockThenScale.length + 2);
+		all[blockThenScale.length] = CASE;
+		all[blockThenScale.length + 1] = CASE_SCALE;
+		return stack(all);
+	}
+
 	/**
 	 * The pedestal as it actually stands, glass case included.
+	 *
+	 * <p>Two things carry the look, and both are texture rather than geometry. The shaft is
+	 * <strong>chiseled stone bricks</strong>, whose face is a bordered frame around a sunken inner
+	 * square — the recessed panel a display entity cannot carve, drawn by the block itself. And the
+	 * foot is <strong>two slabs</strong> rather than one, which is the stepped base of a plinth for
+	 * the price of one more display.
+	 *
+	 * <p><strong>There are deliberately no corner brackets.</strong> The obvious next ornament is a
+	 * stair at each top corner, and it does not work at any size: whichever corner faces the viewer
+	 * lands in the middle of the visible face, on top of the panel it was meant to set off. Smaller
+	 * makes it a wart rather than a corbel, and there is no offset that clears the panel without
+	 * overhanging the cap. The panel is doing the work; leave it visible.
 	 *
 	 * <p>The case is narrower than the cap it sits on, so it reads as set down on the plinth rather
 	 * than as another tier of it.
 	 */
-	public static final Tier[] LIVE = stack(
-			DARK_SLAB, 1.0f,
-			Blocks.LODESTONE, 0.8f,
-			DARK_SLAB, 0.95f,
-			CASE, 0.7f);
+	public static final Tier[] LIVE = cased(
+			DARK_SLAB, 1.06f,
+			DARK_SLAB, 0.9f,
+			Blocks.CHISELED_STONE_BRICKS, 0.8f,
+			DARK_SLAB, 0.95f);
 
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
 	public static final float CASE_CENTRE_Y = caseCentre();
@@ -106,18 +135,24 @@ public final class PlinthShape {
 	public static final float ITEM_SCALE = 1.6f;
 
 	private static float caseCentre() {
-		return LIVE[LIVE.length - 1].centreY();
+		for (Tier tier : LIVE) {
+			if (tier.block() == CASE) {
+				return tier.centreY();
+			}
+		}
+		throw new IllegalStateException("the live plinth has no case for the legendary to sit in");
 	}
 
 	public record Variant(String label, Tier[] tiers) {
 	}
 
 	/**
-	 * The candidates, spread across the three things still in question: whether even scaling fixes
-	 * the stretching, what the shaft is made of, and how squat the whole thing should be.
+	 * The candidates {@code /legendaries debug plinths} stands in a row, so a shape can be judged
+	 * beside the alternatives rather than on its own.
 	 *
-	 * <p>{@code stretched} is the shape before this change, kept so the comparison is visible rather
-	 * than asserted.
+	 * <p>Every one is {@link #cased}, so the row compares plinths rather than plinths against
+	 * bare stacks. {@code stretched} is the shape from before even scaling, kept so the reason for
+	 * that rule stays visible rather than merely asserted.
 	 */
 	public static final Variant[] VARIANTS = {
 		new Variant("stretched (old)", new Tier[] {
@@ -130,17 +165,18 @@ public final class PlinthShape {
 			new Tier(DARK, 0.9f, 0.10f, 0.9f, 1.0f),
 			new Tier(DARK, 1.0f, 0.14f, 1.0f, 1.1f),
 		}),
-		new Variant("even (live)", LIVE),
-		new Variant("even, squat", stack(DARK_SLAB, 1.0f, Blocks.LODESTONE, 0.6f, DARK_SLAB, 0.9f)),
-		new Variant("even, tall", stack(DARK_SLAB, 0.95f, Blocks.LODESTONE, 1.0f, DARK_SLAB, 0.9f)),
-		new Variant("stepped foot", stack(
-				DARK_SLAB, 1.05f, DARK_SLAB, 0.9f, Blocks.LODESTONE, 0.78f, DARK_SLAB, 0.95f)),
-		new Variant("chiseled shaft", stack(
+		new Variant("live", LIVE),
+		new Variant("lodestone shaft", cased(
+				DARK_SLAB, 1.06f, DARK_SLAB, 0.9f, Blocks.LODESTONE, 0.8f, DARK_SLAB, 0.95f)),
+		new Variant("plain foot", cased(
 				DARK_SLAB, 1.0f, Blocks.CHISELED_STONE_BRICKS, 0.8f, DARK_SLAB, 0.95f)),
-		new Variant("deepslate-tile shaft", stack(
-				Blocks.DEEPSLATE_TILE_SLAB, 1.0f, Blocks.DEEPSLATE_TILES, 0.8f, Blocks.DEEPSLATE_TILE_SLAB, 0.95f)),
-		new Variant("andesite framing", stack(
-				Blocks.POLISHED_ANDESITE_SLAB, 1.0f, Blocks.LODESTONE, 0.8f, Blocks.POLISHED_ANDESITE_SLAB, 0.95f)),
+		new Variant("squat", cased(
+				DARK_SLAB, 1.06f, DARK_SLAB, 0.9f, Blocks.CHISELED_STONE_BRICKS, 0.62f, DARK_SLAB, 0.95f)),
+		new Variant("tall", cased(
+				DARK_SLAB, 1.06f, DARK_SLAB, 0.9f, Blocks.CHISELED_STONE_BRICKS, 1.0f, DARK_SLAB, 0.95f)),
+		new Variant("deepslate tiles", cased(
+				Blocks.DEEPSLATE_TILE_SLAB, 1.06f, Blocks.DEEPSLATE_TILE_SLAB, 0.9f,
+				Blocks.CHISELED_DEEPSLATE, 0.8f, Blocks.DEEPSLATE_TILE_SLAB, 0.95f)),
 	};
 
 	private PlinthShape() {
