@@ -137,7 +137,7 @@ public final class PlinthShape {
 	}
 
 	/**
-	 * The pedestal as it actually stands, glass case included.
+	 * The pedestal at its fullest, glass case included.
 	 *
 	 * <p>A stepped foot, a lodestone column, a stepped cap and the case. The steps are what make it
 	 * read as a plinth rather than a post, and they are only affordable because plates are squashed
@@ -159,7 +159,16 @@ public final class PlinthShape {
 			.cased();
 
 	/** The case, found by block rather than by position in the table. */
-	private static final Tier CASE_TIER = caseTier();
+	public static final Tier CASE_TIER = caseTier();
+
+	/**
+	 * The pedestal without its case: what stands whether or not a legendary is home.
+	 *
+	 * <p>Taken out of {@link #LIVE} rather than built as a second profile or read off as a prefix.
+	 * A second profile is a shape to keep in sync with this one; a prefix would assume the case is
+	 * the last tier, which is the positional coupling everything else here reads by block to avoid.
+	 */
+	public static final Tier[] PLINTH = plinthTiers();
 
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
 	public static final float CASE_CENTRE_Y = CASE_TIER.centreY();
@@ -221,6 +230,16 @@ public final class PlinthShape {
 		return slotWidth(slots) * SLOT_FILL / GROUND_WIDTH;
 	}
 
+	private static Tier[] plinthTiers() {
+		List<Tier> tiers = new ArrayList<>();
+		for (Tier tier : LIVE) {
+			if (tier != CASE_TIER) {
+				tiers.add(tier);
+			}
+		}
+		return tiers.toArray(new Tier[0]);
+	}
+
 	private static Tier caseTier() {
 		for (Tier tier : LIVE) {
 			if (tier.block() == CASE) {
@@ -239,6 +258,10 @@ public final class PlinthShape {
 	 * resized click target — left an existing pedestal exactly as it was, and the change reached
 	 * only worlds that had never seen one. Derived rather than a number to bump, so it cannot be
 	 * forgotten.
+	 *
+	 * <p>Taken from {@link #LIVE} rather than from whichever tiers are currently standing, so one
+	 * fingerprint covers both shapes: a pedestal standing empty and one holding a legendary were
+	 * built to the same decisions, and a change to any of them has to reach both.
 	 */
 	public static final String FINGERPRINT = fingerprint();
 
