@@ -22,7 +22,15 @@ public enum LegendarySetting {
 	 * measured safe ceiling. Nobody has profiled it; treat the top of the range as the interesting
 	 * end, not the supported one.
 	 */
-	RADIUS(4, 0, 16, "blocks");
+	RADIUS(4, 0, 16, "blocks"),
+
+	/**
+	 * Percent of an ability's shell left as it was found, rather than transformed.
+	 *
+	 * <p>0 coats the crater in a uniform lining and 100 leaves it as ordinary rock. What the knob is
+	 * really tuning is how much of the ground a crater was cut from still shows in its edge.
+	 */
+	UNMELTED(15, 0, 100, "percent");
 
 	private final int defaultValue;
 	private final int min;

@@ -16,8 +16,7 @@
     "MobMixin",
     "ResultSlotMixin",
     "ShulkerBoxSlotMixin",
-    "SlotMixin",
-    "TextDisplayAccessor"
+    "SlotMixin"
   ],
   "injectors": {
     "defaultRequire": 1
