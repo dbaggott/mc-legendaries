@@ -174,27 +174,26 @@ public final class PlinthShape {
 	 */
 	public static final Tier[] LIVE = profile(PLATE, COLUMN);
 
-	/**
-	 * How tall the plinth stands and how wide it is at its widest, case included.
-	 *
-	 * <p>These size the click target. It was a hard-coded 1.6 square, which stopped being the right
-	 * answer the moment the shape changed: the plinth reaches 2.06, so the case and the legendary
-	 * inside it stood above the box and aiming at the item — the obvious thing to aim at — missed.
-	 * Reading the numbers off the shape means the target cannot fall behind it again.
-	 */
-	public static final float HEIGHT = extent(Tier::topY);
-	public static final float WIDTH = extent(Tier::scaleX);
-
-	private static float extent(java.util.function.Function<Tier, Float> of) {
-		float most = 0.0f;
-		for (Tier tier : LIVE) {
-			most = Math.max(most, of.apply(tier));
-		}
-		return most;
-	}
+	/** The case, found by block rather than by position in the table. */
+	private static final Tier CASE_TIER = caseTier();
 
 	/** Where the item floats: the middle of the glass case, so it is held inside it. */
-	public static final float CASE_CENTRE_Y = caseCentre();
+	public static final float CASE_CENTRE_Y = CASE_TIER.centreY();
+
+	/**
+	 * The glass case, as the click target.
+	 *
+	 * <p>The case is what a player aims at — it is the thing with a legendary visibly inside it —
+	 * so it is the whole of what answers a right-click. The plinth under it is scenery.
+	 *
+	 * <p>Read off the shape rather than written down twice. The target was a hard-coded 1.6 square
+	 * and the plinth grew past it, leaving the top of the case unclickable; taking the numbers from
+	 * the case means it cannot come adrift again.
+	 */
+	public static final float CASE_BOTTOM_Y = CASE_TIER.bottomY();
+
+	/** The case is an evenly scaled full block, so this is its width and its height alike. */
+	public static final float CASE_SIZE = CASE_SCALE;
 
 	/**
 	 * How wide an item is at GROUND, in blocks.
@@ -239,13 +238,36 @@ public final class PlinthShape {
 		return slotWidth(slots) * SLOT_FILL / GROUND_WIDTH;
 	}
 
-	private static float caseCentre() {
+	private static Tier caseTier() {
 		for (Tier tier : LIVE) {
 			if (tier.block() == CASE) {
-				return tier.centreY();
+				return tier;
 			}
 		}
 		throw new IllegalStateException("the live plinth has no case for the legendary to sit in");
+	}
+
+	/**
+	 * What the pedestal's entities were built to, so a shape change reaches a world that already
+	 * has one standing.
+	 *
+	 * <p>The rebuild used to trigger on a mismatched entity <em>count</em>, which only catches a
+	 * change that adds or removes a tier. Anything else — a different block, a different scale, a
+	 * resized click target — left an existing pedestal exactly as it was, and the change reached
+	 * only worlds that had never seen one. Derived rather than a number to bump, so it cannot be
+	 * forgotten.
+	 */
+	public static final String FINGERPRINT = fingerprint();
+
+	private static String fingerprint() {
+		StringBuilder shape = new StringBuilder();
+		for (Tier tier : LIVE) {
+			shape.append(BuiltInRegistries.BLOCK.getKey(tier.block()))
+					.append(tier.scaleX()).append(',').append(tier.scaleY()).append(',')
+					.append(tier.scaleZ()).append('@').append(tier.bottomY()).append(';');
+		}
+		shape.append(CASE_BOTTOM_Y).append(':').append(CASE_SIZE);
+		return Integer.toHexString(shape.toString().hashCode());
 	}
 
 	public record Variant(String label, Tier[] tiers) {

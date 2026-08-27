@@ -56,6 +56,12 @@ public final class Pedestal {
 	/** Marks which legendary an item display belongs to, so a claim can put the right one back. */
 	private static final String SLOT_TAG_PREFIX = "legendaries_slot_";
 
+	/**
+	 * Marks which shape an entity was built to, so a pedestal already standing is rebuilt when the
+	 * shape changes rather than kept as it was. See {@link PlinthShape#FINGERPRINT}.
+	 */
+	private static final String SHAPE_TAG = "legendaries_shape_" + PlinthShape.FINGERPRINT;
+
 	private static final double SEARCH_RADIUS = 3.0;
 
 	/** Ticks per quarter-turn of the legendaries on their pedestal; four make a revolution. */
@@ -138,12 +144,23 @@ public final class Pedestal {
 		Legendaries.LOGGER.info("Pedestal standing at {}", pos);
 	}
 
-	/** Whether the plinth, the click target and exactly the expected item displays are all present. */
+	/**
+	 * Whether the plinth, the click target and exactly the expected item displays are all present,
+	 * and all built to the shape this version draws.
+	 *
+	 * <p><strong>The shape tag is what makes a change reach a world that already has a pedestal.</strong>
+	 * Counting alone only notices a tier being added or removed; a different block, a different
+	 * scale or a resized click target leaves the count untouched, so the old pedestal stood
+	 * unchanged and the change reached only worlds that had never seen one.
+	 */
 	private static boolean structureIntact(ServerLevel level, BlockPos pos, LegendaryState state) {
 		int plinths = 0;
 		int targets = 0;
 		int displays = 0;
 		for (Entity entity : ours(level, pos)) {
+			if (!entity.entityTags().contains(SHAPE_TAG)) {
+				return false;
+			}
 			if (entity instanceof Display.BlockDisplay) {
 				plinths++;
 			} else if (entity instanceof Interaction) {
@@ -282,6 +299,7 @@ public final class Pedestal {
 		shown.getEntityData().set(DisplayTransformAccessor.scaleId(), new Vector3f(scale, scale, scale));
 		shown.getSlot(0).set(stack);
 		shown.addTag(TAG);
+		shown.addTag(SHAPE_TAG);
 		shown.addTag(SLOT_TAG_PREFIX + legendary.name());
 		level.addFreshEntity(shown);
 	}
@@ -309,16 +327,19 @@ public final class Pedestal {
 	}
 
 	private static void buildFixtures(ServerLevel level, BlockPos pos) {
-		buildTiers(level, pos, PlinthShape.LIVE, TAG);
+		buildTiers(level, pos, PlinthShape.LIVE, TAG, SHAPE_TAG);
 
 		Interaction click = Pedestal.<Interaction>type("interaction").create(level, EntitySpawnReason.COMMAND);
 		if (click != null) {
-			click.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-			// Sized from the plinth, so the whole of it is clickable — the case and the legendary
-			// standing in it included, which is what a player actually aims at.
-			click.getEntityData().set(InteractionAccessor.widthId(), PlinthShape.WIDTH);
-			click.getEntityData().set(InteractionAccessor.heightId(), PlinthShape.HEIGHT);
+			// The case alone answers a right-click: it is the thing with a legendary visibly inside
+			// it, and the plinth holding it up is scenery. An Interaction grows upward from its
+			// position, so it starts at the case's underside and is exactly the glass.
+			click.snapTo(pos.getX() + 0.5, pos.getY() + PlinthShape.CASE_BOTTOM_Y, pos.getZ() + 0.5,
+					0.0f, 0.0f);
+			click.getEntityData().set(InteractionAccessor.widthId(), PlinthShape.CASE_SIZE);
+			click.getEntityData().set(InteractionAccessor.heightId(), PlinthShape.CASE_SIZE);
 			click.addTag(TAG);
+			click.addTag(SHAPE_TAG);
 			level.addFreshEntity(click);
 		}
 	}
