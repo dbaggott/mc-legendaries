@@ -35,11 +35,12 @@ public enum LegendarySetting {
 	/**
 	 * How hard an ability throws what it catches, as a percent of one stick of TNT's impulse.
 	 *
-	 * <p>Percent rather than sticks because this is tuned by feel, and whole sticks would leave two
-	 * usable settings below the default. 1000 is a bound on how far a mistyped digit can go rather
-	 * than a measured ceiling; nobody has looked at what a server makes of an impulse that size.
+	 * <p>Percent rather than sticks because this is tuned by feel, and the default is a stick and a
+	 * half — which whole sticks cannot express at all. 1000 is a bound on how far a mistyped digit
+	 * can go rather than a measured ceiling; nobody has looked at what a server makes of an impulse
+	 * that size.
 	 */
-	KNOCKBACK(200, 0, 1000, "percent");
+	KNOCKBACK(150, 0, 1000, "percent");
 
 	private final int defaultValue;
 	private final int min;

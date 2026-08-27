@@ -69,6 +69,17 @@ public final class MoltenBlast {
 	private static final float BLAST_PITCH = 0.5f;
 
 	/**
+	 * The quench under the boom: {@code block.fire.extinguish}, the hiss vanilla uses for water
+	 * meeting fire, layered on the same instant as the explosion.
+	 *
+	 * <p>Under the boom's volume so it is heard as part of it rather than beside it, and far under
+	 * the pitch vanilla plays it at — a hiss that high reads as a doused candle, and what this is
+	 * standing for is a sphere of molten rock going out at once.
+	 */
+	private static final float QUENCH_VOLUME = 3.0f;
+	private static final float QUENCH_PITCH = 0.6f;
+
+	/**
 	 * The crater crackling as it cools: beats of campfire crackle scattered across the sphere the
 	 * blast just cleared, each quieter than the last until they stop.
 	 *
@@ -253,7 +264,7 @@ public final class MoltenBlast {
 	 * <p>{@code sendParticles} and {@code playSound} on a {@link ServerLevel} are both
 	 * server-to-client packets, so this reaches a vanilla client with nothing installed — which is
 	 * the property the whole mod is built around. A blast only modded clients could see or hear
-	 * would be worse than none, and it is why the sound is a vanilla one: anything of ours would
+	 * would be worse than none, and it is why the sounds are vanilla ones: anything of ours would
 	 * need a resource pack on every client.
 	 *
 	 * <p>{@code EXPLOSION_EMITTER} is the single large bloom TNT uses; the scattered
@@ -272,6 +283,8 @@ public final class MoltenBlast {
 				blastRadius * 0.5, blastRadius * 0.5, blastRadius * 0.5, 0.05);
 		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.GENERIC_EXPLODE,
 				SoundSource.BLOCKS, BLAST_VOLUME, BLAST_PITCH);
+		level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.FIRE_EXTINGUISH,
+				SoundSource.BLOCKS, QUENCH_VOLUME, QUENCH_PITCH);
 	}
 
 	/**
