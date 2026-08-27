@@ -195,17 +195,22 @@ public final class MoltenBlast {
 	 * because the sphere between the two is about to be air and there is nothing left to shelter
 	 * behind.
 	 *
-	 * <p>A thrown player is handed the impulse directly. A push changes the server's copy of an
-	 * entity's motion, and the server sends that copy to everyone tracking the entity — everyone
-	 * except the player it belongs to, whose own client is the authority on where they are. Without
-	 * the packet a player is burned and stays standing.
+	 * <p>A thrown player is handed the impulse directly, because a push alone only reaches the
+	 * server's copy of their motion. What sends that copy back to the player it belongs to is the
+	 * entity being marked hurt, which damage landing does as a side effect — and this damage does
+	 * not always land: a victim inside its invulnerability window takes none, and a creative player
+	 * never does. Without the packet those two are thrown on the server and stand still on screen.
+	 *
+	 * <p>Flying in creative is the exception, as it is to a real explosion. Nothing else syncs the
+	 * push to them either, so withholding the packet is what leaves an admin watching a blast from
+	 * above where they were.
 	 */
 	private static void hurl(LivingEntity victim, Vec3 centre) {
 		double falloff = Math.max(1.0 - Math.sqrt(victim.distanceToSqr(centre)) / TNT_KNOCKBACK_REACH, 0.0);
 		double resistance = victim.getAttributeValue(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE);
 		Vec3 outward = victim.getEyePosition().subtract(centre).normalize();
 		victim.push(outward.scale(KNOCKBACK_TNT * falloff * (1.0 - resistance)));
-		if (victim instanceof ServerPlayer thrown) {
+		if (victim instanceof ServerPlayer thrown && !(thrown.isCreative() && thrown.getAbilities().flying)) {
 			thrown.connection.send(new ClientboundSetEntityMotionPacket(thrown));
 		}
 	}
