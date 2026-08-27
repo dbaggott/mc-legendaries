@@ -96,7 +96,8 @@ public final class MoltenBlast {
 	 *
 	 * <p>Scattered rather than sounded at the centre because the crater is a volume, and one source
 	 * in the middle of a wide one sounds like a point. Pitched under default for the same reason
-	 * the boom is: a big fire is a low one.
+	 * the boom is: a big fire is a low one, and spread around that so a dozen plays of one sample
+	 * do not read as one sample a dozen times.
 	 *
 	 * <p>Two constraints shape the rest of this, and both are easy to write past.
 	 *
@@ -110,14 +111,13 @@ public final class MoltenBlast {
 	 * <p>The sound has to be a SHORT one. A beat reads as a step down from the one before it only
 	 * once that one has finished, so against a sample longer than the spacing every beat is still
 	 * sounding when the last lands, and the steps pile into one flat wash that ends by running out
-	 * rather than fading. A lava pop is 0.15s where a campfire crackle is 2.3 to 3.9, which is what
-	 * leaves room for five beats inside a second.
+	 * rather than fading. A lava pop is 0.15s where a campfire crackle is 2.3 to 3.9.
 	 */
-	private static final int SETTLE_BEATS = 5;
-	private static final int SETTLE_TICKS_PER_BEAT = 4;
-	private static final int SETTLE_SOURCES_PER_BEAT = 3;
+	private static final int SETTLE_TICKS = 20;
+	private static final float SETTLE_POPS_PER_TICK = 1.5f;
 	private static final float SETTLE_VOLUME = 1.0f;
 	private static final float SETTLE_PITCH = 0.8f;
+	private static final float SETTLE_PITCH_SPREAD = 0.3f;
 
 	/**
 	 * What the blast does to anything caught in it: two and a half hearts, in health points.
@@ -326,11 +326,11 @@ public final class MoltenBlast {
 			Crater crater = cooling.next();
 			int elapsed = server.getTickCount() - crater.firedTick();
 			// A blast fires earlier in the same tick this handler ends, so the first pass over a
-			// fresh crater sees no elapsed time at all — that moment is the boom's, not a beat's.
-			if (elapsed > 0 && elapsed % SETTLE_TICKS_PER_BEAT == 0) {
-				settleBeat(crater, elapsed / SETTLE_TICKS_PER_BEAT);
+			// fresh crater sees no elapsed time at all — that moment is the boom's, not the burn's.
+			if (elapsed > 0 && elapsed <= SETTLE_TICKS) {
+				settleTick(crater, 1.0f - (float) elapsed / SETTLE_TICKS);
 			}
-			if (elapsed >= SETTLE_BEATS * SETTLE_TICKS_PER_BEAT) {
+			if (elapsed >= SETTLE_TICKS) {
 				cooling.remove();
 			}
 		}
@@ -346,16 +346,27 @@ public final class MoltenBlast {
 		COOLING.clear();
 	}
 
-	/** One beat of the settling burn, scattered across the crater and quieter the later it falls. */
-	private static void settleBeat(Crater crater, int beat) {
+	/**
+	 * One tick of the settling burn: pops scattered across the crater, thinning and quietening
+	 * together as {@code fade} runs from one down to none.
+	 *
+	 * <p>Scattered in time as well as in space. A fixed group of pops on a fixed cadence is a
+	 * rhythm, and a rhythm in something meant to be rock cooling is heard as a stutter — so how
+	 * many land in a tick is a rate rather than a count, and the fractional part of it decides a
+	 * coin toss. That toss is what lets the rate fall below one pop a tick and keep scattering
+	 * rather than rounding to nothing and cutting the tail off early.
+	 */
+	private static void settleTick(Crater crater, float fade) {
 		ServerLevel level = crater.level();
 		RandomSource random = level.getRandom();
-		float volume = SETTLE_VOLUME * (float) (SETTLE_BEATS - beat + 1) / SETTLE_BEATS;
-		for (int source = 0; source < SETTLE_SOURCES_PER_BEAT; source++) {
+		float rate = SETTLE_POPS_PER_TICK * fade;
+		int pops = (int) rate + (random.nextFloat() < rate - (int) rate ? 1 : 0);
+		for (int pop = 0; pop < pops; pop++) {
 			Vec3 at = crater.centre().add(scatter(random, crater.blastRadius()),
 					scatter(random, crater.blastRadius()), scatter(random, crater.blastRadius()));
+			float pitch = SETTLE_PITCH + (random.nextFloat() - 0.5f) * SETTLE_PITCH_SPREAD;
 			level.playSound(null, at.x, at.y, at.z, SoundEvents.LAVA_POP,
-					SoundSource.BLOCKS, volume, SETTLE_PITCH);
+					SoundSource.BLOCKS, SETTLE_VOLUME * fade, pitch);
 		}
 	}
 
