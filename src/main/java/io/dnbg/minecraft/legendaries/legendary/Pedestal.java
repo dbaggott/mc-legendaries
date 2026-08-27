@@ -287,11 +287,11 @@ public final class Pedestal {
 			part.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
 			part.getEntityData().set(BlockDisplayAccessor.blockStateId(), tier.block().defaultBlockState());
 			part.getEntityData().set(DisplayTransformAccessor.scaleId(),
-					new Vector3f(tier.width(), tier.height(), tier.width()));
-			// A block model spans 0..1 from its origin, so centring it costs half its own size.
+					new Vector3f(tier.scaleX(), tier.scaleY(), tier.scaleZ()));
+			// A block model grows from its own origin, so horizontal centring costs half its scaled
+			// width — and the vertical offset is simply where its underside goes.
 			part.getEntityData().set(DisplayTransformAccessor.translationId(),
-					new Vector3f(-tier.width() / 2.0f, tier.centreY() - tier.height() / 2.0f,
-							-tier.width() / 2.0f));
+					new Vector3f(-tier.scaleX() / 2.0f, tier.bottomY(), -tier.scaleZ() / 2.0f));
 			for (String tag : tags) {
 				part.addTag(tag);
 			}

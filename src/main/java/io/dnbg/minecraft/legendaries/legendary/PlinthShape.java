@@ -19,7 +19,27 @@ import net.minecraft.world.level.block.SlabBlock;
  * naturally thin blocks rather than from crushing tall ones.
  */
 public final class PlinthShape {
-	public record Tier(Block block, float width, float height, float centreY) {
+	/**
+	 * One tier: a block, the scale applied to each axis, and the height its underside sits at.
+	 *
+	 * <p>These are <em>scale factors</em>, not world sizes, and the distinction is the whole reason
+	 * the record is shaped this way. A slab is already half a block tall, so a slab at scale 1 is
+	 * 0.5 high — feeding a wanted height of 0.5 in as the scale would render it 0.25 high and
+	 * squashed. Ask for a scale; read {@link #worldHeight()} for what you get.
+	 */
+	public record Tier(Block block, float scaleX, float scaleY, float scaleZ, float bottomY) {
+		/** How tall this tier actually stands, once its block's own proportions are applied. */
+		public float worldHeight() {
+			return scaleY * naturalHeight(block);
+		}
+
+		public float topY() {
+			return bottomY + worldHeight();
+		}
+
+		public float centreY() {
+			return bottomY + worldHeight() / 2.0f;
+		}
 	}
 
 	private static final Block DARK = Blocks.POLISHED_DEEPSLATE;
@@ -48,8 +68,7 @@ public final class PlinthShape {
 	 * proportions survive and its texture is not stretched.
 	 */
 	private static Tier uniform(Block block, float scale, float bottomY) {
-		float height = scale * naturalHeight(block);
-		return new Tier(block, scale, height, bottomY + height / 2.0f);
+		return new Tier(block, scale, scale, scale, bottomY);
 	}
 
 	/** Stacks tiers flush, each sitting on the one below, and returns the finished profile. */
@@ -60,7 +79,7 @@ public final class PlinthShape {
 			Block block = (Block) blockThenScale[i * 2];
 			float scale = ((Number) blockThenScale[i * 2 + 1]).floatValue();
 			tiers[i] = uniform(block, scale, y);
-			y += tiers[i].height();
+			y = tiers[i].topY();
 		}
 		return tiers;
 	}
@@ -84,8 +103,7 @@ public final class PlinthShape {
 	public static final float ITEM_SCALE = 0.45f;
 
 	private static float caseCentre() {
-		Tier top = LIVE[LIVE.length - 1];
-		return top.centreY();
+		return LIVE[LIVE.length - 1].centreY();
 	}
 
 	public record Variant(String label, Tier[] tiers) {
@@ -100,12 +118,14 @@ public final class PlinthShape {
 	 */
 	public static final Variant[] VARIANTS = {
 		new Variant("stretched (old)", new Tier[] {
-			new Tier(DARK, 1.0f, 0.12f, 0.06f),
-			new Tier(DARK, 0.9f, 0.10f, 0.17f),
-			new Tier(Blocks.LODESTONE, 0.82f, 0.72f, 0.58f),
-			new Tier(DARK, 0.86f, 0.06f, 0.97f),
-			new Tier(DARK, 0.9f, 0.10f, 1.05f),
-			new Tier(DARK, 1.0f, 0.14f, 1.17f),
+			// Deliberately uneven, kept so the comparison is visible rather than asserted. These
+			// are the numbers from before uniform scaling; every one of them squashes its block.
+			new Tier(DARK, 1.0f, 0.12f, 1.0f, 0.0f),
+			new Tier(DARK, 0.9f, 0.10f, 0.9f, 0.12f),
+			new Tier(Blocks.LODESTONE, 0.82f, 0.72f, 0.82f, 0.22f),
+			new Tier(DARK, 0.86f, 0.06f, 0.86f, 0.94f),
+			new Tier(DARK, 0.9f, 0.10f, 0.9f, 1.0f),
+			new Tier(DARK, 1.0f, 0.14f, 1.0f, 1.1f),
 		}),
 		new Variant("even (live)", LIVE),
 		new Variant("even, squat", stack(DARK_SLAB, 1.0f, Blocks.LODESTONE, 0.6f, DARK_SLAB, 0.9f)),
