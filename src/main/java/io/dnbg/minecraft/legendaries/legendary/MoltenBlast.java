@@ -91,8 +91,8 @@ public final class MoltenBlast {
 	private static final float IGNITION_PITCH = 0.7f;
 
 	/**
-	 * The crater settling as it cools: beats of lava pop scattered across the sphere the blast just
-	 * cleared, each quieter than the last until they stop.
+	 * The crater settling as it cools: lava pops scattered across the sphere the blast just cleared,
+	 * thinning and quietening together until they stop.
 	 *
 	 * <p>Scattered rather than sounded at the centre because the crater is a volume, and one source
 	 * in the middle of a wide one sounds like a point. Pitched under default for the same reason
@@ -101,17 +101,17 @@ public final class MoltenBlast {
 	 *
 	 * <p>Two constraints shape the rest of this, and both are easy to write past.
 	 *
-	 * <p>The fade exists only because these volumes stay at or under {@code 1.0}. A volume is
+	 * <p>The fade exists only because this volume stays at or under {@code 1.0}. A volume is
 	 * clamped to that before it becomes gain; past it the number buys audible RANGE instead. A
-	 * settle stepping down from a larger figure is therefore one every listener hears at a flat
-	 * level, however carefully the steps are written — and the cost of keeping it real is that
-	 * every beat carries the 16 blocks a volume of 1.0 buys, rather than the crater being heard
+	 * settle quietening from a larger figure is therefore one every listener hears at a flat
+	 * level, however carefully the fall is written — and the cost of keeping it real is that every
+	 * pop carries only the 16 blocks a volume of 1.0 buys, rather than the crater being heard
 	 * cooling from across a valley.
 	 *
-	 * <p>The sound has to be a SHORT one. A beat reads as a step down from the one before it only
-	 * once that one has finished, so against a sample longer than the spacing every beat is still
-	 * sounding when the last lands, and the steps pile into one flat wash that ends by running out
-	 * rather than fading. A lava pop is 0.15s where a campfire crackle is 2.3 to 3.9.
+	 * <p>The sound has to be a SHORT one. A thinning rate is heard as thinning only where each play
+	 * finishes before the next begins; against a sample longer than the gaps between them they pile
+	 * into one flat wash that ends by running out rather than fading. A lava pop is 0.15s where a
+	 * campfire crackle is 2.3 to 3.9.
 	 */
 	private static final int SETTLE_TICKS = 20;
 	private static final float SETTLE_POPS_PER_TICK = 1.5f;
@@ -161,15 +161,15 @@ public final class MoltenBlast {
 	/**
 	 * A crater still cooling, and where in the world it is.
 	 *
-	 * <p>Held rather than sounded along with the boom because the beats have to land on later ticks
+	 * <p>Held rather than sounded along with the boom because the pops have to land on later ticks
 	 * than the blast did. The level travels with it, since two players in two dimensions can have
 	 * craters cooling at once, and so does the radius the blast was fired at — the knob can be
-	 * turned while one is still crackling.
+	 * turned while one is still popping.
 	 */
 	private record Crater(ServerLevel level, Vec3 centre, int blastRadius, int firedTick) {
 	}
 
-	/** Craters still cooling, drained by {@link #settle} as each sounds its last beat. */
+	/** Craters still cooling, drained by {@link #settle} as each reaches the end of its window. */
 	private static final List<Crater> COOLING = new ArrayList<>();
 
 	private MoltenBlast() {
@@ -315,7 +315,10 @@ public final class MoltenBlast {
 	}
 
 	/**
-	 * Sounds a beat for every crater due one this tick, and forgets each once its last beat lands.
+	 * Burns every cooling crater one tick further along, and forgets each once its window is up.
+	 *
+	 * <p>Every crater still held is burned on every tick of that window; how much of it lands is
+	 * {@link #settleTick}'s to read off the fade, so nothing here schedules anything.
 	 *
 	 * <p>A server tick handler because a sound has to be emitted on the server thread, and because
 	 * the tick count is the same clock the crater recorded when it was fired.
@@ -327,7 +330,7 @@ public final class MoltenBlast {
 			int elapsed = server.getTickCount() - crater.firedTick();
 			// A blast fires earlier in the same tick this handler ends, so the first pass over a
 			// fresh crater sees no elapsed time at all — that moment is the boom's, not the burn's.
-			if (elapsed > 0 && elapsed <= SETTLE_TICKS) {
+			if (elapsed > 0 && elapsed < SETTLE_TICKS) {
 				settleTick(crater, 1.0f - (float) elapsed / SETTLE_TICKS);
 			}
 			if (elapsed >= SETTLE_TICKS) {
@@ -340,7 +343,7 @@ public final class MoltenBlast {
 	 * Drops every crater still cooling, for a server on its way out.
 	 *
 	 * <p>Both halves of what a crater holds go with that server: its level stops being a live world,
-	 * and the tick count its beats are measured against restarts from zero on the next one.
+	 * and the tick count its pops are measured against restarts from zero on the next one.
 	 */
 	public static void forgetCoolingCraters() {
 		COOLING.clear();
