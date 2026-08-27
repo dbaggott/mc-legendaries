@@ -45,17 +45,16 @@ public final class AbilityCooldown {
 	private static final int SECONDS_PER_MINUTE = 60;
 
 	/**
-	 * The two colours the line is written in: the ability's name, then the time left.
+	 * The colours the line is written in: the ability's name, then the time left. Nothing punctuates
+	 * the two halves, so the change of colour is what separates them.
 	 *
-	 * <p>The name is a label that never changes and the time is the part worth looking at, so the
-	 * label recedes and the value carries the only saturated colour on the line. Nothing punctuates
-	 * the two halves, which is what makes the contrast between them load-bearing rather than
-	 * decorative — two strong colours side by side would leave the line with no focus.
-	 *
-	 * <p>{@link ChatFormatting#AQUA} is vanilla's own for {@link
+	 * <p>The name's has no formatting code behind it, so it travels as an RGB value in the style
+	 * rather than as a palette entry — which a vanilla client renders with nothing installed, the
+	 * property this whole mod is built on. The time's is a palette entry and stays one:
+	 * {@link ChatFormatting#AQUA} is vanilla's colour for {@link
 	 * net.minecraft.world.item.Rarity#RARE}, which is what an enchanted item's name is written in.
 	 */
-	private static final ChatFormatting NAME_COLOUR = ChatFormatting.GRAY;
+	private static final int NAME_COLOUR = 0xFFAB57;
 	private static final ChatFormatting REMAINING_COLOUR = ChatFormatting.AQUA;
 
 	/**
@@ -131,7 +130,7 @@ public final class AbilityCooldown {
 					running.remove();
 					ended = true;
 				} else if (showing == null) {
-					showing = Component.literal(ability.displayName() + " ").withStyle(NAME_COLOUR)
+					showing = Component.literal(ability.displayName() + " ").withColor(NAME_COLOUR)
 							.append(Component.literal(remainingText(remaining)).withStyle(REMAINING_COLOUR));
 				}
 			}
