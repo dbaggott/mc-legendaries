@@ -5,7 +5,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -22,20 +21,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(AnvilMenu.class)
 public abstract class AnvilMenuMixin {
-	/** Vanilla's layout: the item, the sacrifice, then the result. */
-	@Unique
-	private static final int LEGENDARIES$BASE = 0;
-	@Unique
-	private static final int LEGENDARIES$SACRIFICE = 1;
-	@Unique
-	private static final int LEGENDARIES$RESULT = 2;
-
 	@Inject(method = "createResult", at = @At("TAIL"))
 	private void legendaries$refuseForgingALegendary(CallbackInfo ci) {
 		AbstractContainerMenu self = (AbstractContainerMenu) (Object) this;
-		if (Legendary.isAny(self.getSlot(LEGENDARIES$BASE).getItem())
-				|| Legendary.isAny(self.getSlot(LEGENDARIES$SACRIFICE).getItem())) {
-			self.getSlot(LEGENDARIES$RESULT).set(ItemStack.EMPTY);
+		if (Legendary.isAny(self.getSlot(AnvilMenu.INPUT_SLOT).getItem())
+				|| Legendary.isAny(self.getSlot(AnvilMenu.ADDITIONAL_SLOT).getItem())) {
+			self.getSlot(AnvilMenu.RESULT_SLOT).set(ItemStack.EMPTY);
 		}
 	}
 }
