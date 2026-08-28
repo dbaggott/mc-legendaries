@@ -22,11 +22,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Refuses a legendary into any slot that is not the player's own.
  *
- * <p>This is the whole of the container rule for anything a player does through a screen. Every
- * vanilla storage screen — chest, trapped chest, barrel, ender chest, shulker box, hopper, dropper,
- * dispenser — builds plain {@link Slot}s over a non-player container, so one check covers them all.
- * The furnace family and the chiseled bookshelf override {@code mayPlace} with their own rules and
- * never reach this, but those already refuse a legendary on their own terms.
+ * <p>This is the container rule for storage — anything a player puts a legendary <em>away</em> in
+ * through a screen. Every vanilla storage screen — chest, trapped chest, barrel, ender chest,
+ * shulker box, hopper, dropper, dispenser — builds plain {@link Slot}s over a non-player container,
+ * so one check covers them all.
+ *
+ * <p>It does not reach a screen that overrides {@code mayPlace}, and not all of those refuse a
+ * legendary on their own terms. The furnace family and the chiseled bookshelf do. The grindstone and
+ * the anvil do not, and they consume what they are given rather than storing it, so they are refused
+ * where they decide what to make instead — see {@link GrindstoneMenuMixin} and {@link
+ * AnvilMenuMixin}.
  *
  * <p>The refusal is silent here by design: {@code mayPlace} is called for hover and layout, many
  * times a second, so a message would fire constantly rather than on an actual attempt.

@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "BlockDisplayAccessor",
+    "AnvilMenuMixin",
     "BlockItemMixin",
     "BundleContentsMixin",
     "CrafterBlockMixin",
@@ -16,6 +17,8 @@
     "ItemDisplayAccessor",
     "ItemEntityMixin",
     "MobMixin",
+    "GrindstoneMenuMixin",
+    "RepairItemRecipeMixin",
     "ResultSlotAccessor",
     "ResultSlotMixin",
     "ShulkerBoxSlotMixin",
