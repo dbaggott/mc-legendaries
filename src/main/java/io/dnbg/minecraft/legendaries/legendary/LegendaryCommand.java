@@ -22,7 +22,10 @@ import net.minecraft.world.entity.player.Inventory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -31,19 +34,43 @@ import net.minecraft.world.item.ItemStack;
  * <p>{@code pedestal} exists because the pedestal's position is stored rather than derived — world
  * spawn is only its initial siting, and without a way to move it that "stored" would be a
  * distinction with no difference. {@code item} hands out and takes back legendaries, ignoring the
- * one-per-world rule on purpose. {@code config} turns the ability knobs — and names the ability
- * rather than its carrier, because that is what they belong to — so tuning a blast is a command and
- * a swing rather than an edit, a rebuild and a relaunch.
+ * one-per-world rule on purpose. {@code config} turns the knobs — naming whatever each one belongs
+ * to, which {@link Tunable} settles — so tuning a blast is a command and a swing rather than an
+ * edit, a rebuild and a relaunch.
  */
 public final class LegendaryCommand {
 	private static final DynamicCommandExceptionType UNKNOWN_LEGENDARY = new DynamicCommandExceptionType(
 			name -> Component.literal("No legendary called '" + name + "'"));
-	private static final DynamicCommandExceptionType UNKNOWN_ABILITY = new DynamicCommandExceptionType(
-			name -> Component.literal("No ability called '" + name + "'"));
+	private static final DynamicCommandExceptionType UNKNOWN_TUNABLE = new DynamicCommandExceptionType(
+			name -> Component.literal("Nothing configurable called '" + name + "'"));
 	private static final DynamicCommandExceptionType UNKNOWN_SETTING = new DynamicCommandExceptionType(
 			name -> Component.literal("No setting called '" + name + "'"));
 	private static final String NOT_LOADED =
 			"The pedestal has not loaded yet. Go and look at it, then try again.";
+
+	/**
+	 * Every subject {@code config} accepts, by the name it answers to — abilities before the
+	 * legendaries that carry them, which is the order they are suggested in.
+	 *
+	 * <p>Built rather than searched so that two subjects claiming one name fails at load instead of
+	 * one quietly shadowing the other. They would share their saved settings as well as their name,
+	 * which is the half nothing would report.
+	 */
+	private static final Map<String, Tunable> TUNABLES = tunablesByName();
+
+	private static Map<String, Tunable> tunablesByName() {
+		Map<String, Tunable> byName = new LinkedHashMap<>();
+		Stream.<Tunable>concat(Arrays.stream(Ability.values()), Arrays.stream(Legendary.values()))
+				.filter(tunable -> !tunable.settings().isEmpty())
+				.forEach(tunable -> {
+					Tunable clash = byName.put(tunable.commandName(), tunable);
+					if (clash != null) {
+						throw new IllegalStateException(clash.name() + " and " + tunable.name()
+								+ " both answer to '" + tunable.commandName() + "'");
+					}
+				});
+		return byName;
+	}
 
 	private LegendaryCommand() {
 	}
@@ -98,18 +125,18 @@ public final class LegendaryCommand {
 												})))))
 				.then(Commands.literal("config")
 						.then(Commands.literal("get")
-								.then(abilityArg()
+								.then(tunableArg()
 										.executes(context -> reportSettings(context.getSource(),
-												namedAbility(context)))))
+												namedTunable(context)))))
 						.then(Commands.literal("set")
-								.then(abilityArg()
+								.then(tunableArg()
 										.then(Commands.argument("setting", StringArgumentType.word())
 												.suggests((context, builder) -> SharedSuggestionProvider.suggest(
-														Arrays.stream(LegendarySetting.values())
+														settingsOfNamedTunable(context)
 																.map(LegendarySetting::commandName), builder))
 												.then(Commands.argument("value", IntegerArgumentType.integer())
 														.executes(context -> setSetting(context.getSource(),
-																namedAbility(context), namedSetting(context),
+																namedTunable(context), namedSetting(context),
 																IntegerArgumentType.getInteger(context, "value"))))))));
 	}
 
@@ -120,27 +147,40 @@ public final class LegendaryCommand {
 	}
 
 	/**
-	 * {@code config} names the ABILITY, not the legendary carrying it.
+	 * {@code config} names whatever the knob belongs to, which is not always the item in your hand.
 	 *
-	 * <p>Which is what the settings belong to: two carriers of one ability tune together, so naming
-	 * a carrier would ask which of them the answer was about. Every name this accepts has settings by
-	 * construction, so there is no "that one has no ability to configure" to answer.
+	 * <p>A cooldown belongs to the ABILITY rather than to a carrier of it: two legendaries carrying
+	 * one ability tune together, so naming a carrier would ask which of them the answer was about.
+	 * What a legendary grants merely by being carried has no ability to belong to, so it belongs to
+	 * the legendary. Both go in one argument because somebody configuring something names the thing.
+	 *
+	 * <p>Only subjects that have knobs are offered or accepted, so there is no "that one has nothing
+	 * to configure" to answer.
 	 */
-	private static RequiredArgumentBuilder<CommandSourceStack, String> abilityArg() {
-		return Commands.argument("ability", StringArgumentType.word())
-				.suggests((context, builder) -> SharedSuggestionProvider.suggest(
-						Arrays.stream(Ability.values()).map(Ability::commandName), builder));
+	private static RequiredArgumentBuilder<CommandSourceStack, String> tunableArg() {
+		return Commands.argument("subject", StringArgumentType.word())
+				.suggests((context, builder) -> SharedSuggestionProvider.suggest(TUNABLES.keySet(), builder));
 	}
 
-	private static Ability namedAbility(CommandContext<CommandSourceStack> context)
+	private static Tunable namedTunable(CommandContext<CommandSourceStack> context)
 			throws CommandSyntaxException {
-		String name = StringArgumentType.getString(context, "ability");
-		for (Ability ability : Ability.values()) {
-			if (ability.commandName().equals(name)) {
-				return ability;
-			}
+		String name = StringArgumentType.getString(context, "subject");
+		Tunable subject = TUNABLES.get(name);
+		if (subject == null) {
+			throw UNKNOWN_TUNABLE.create(name);
 		}
-		throw UNKNOWN_ABILITY.create(name);
+		return subject;
+	}
+
+	/**
+	 * The knobs the subject already typed has, for suggesting the setting that follows it.
+	 *
+	 * <p>Empty while that subject is still half-typed or unknown: suggestion runs against a partial
+	 * command line, so it has to answer without one rather than refuse.
+	 */
+	private static Stream<LegendarySetting> settingsOfNamedTunable(CommandContext<CommandSourceStack> context) {
+		Tunable subject = TUNABLES.get(StringArgumentType.getString(context, "subject"));
+		return subject == null ? Stream.empty() : subject.settings().stream();
 	}
 
 	private static Legendary namedLegendary(CommandContext<CommandSourceStack> context)
@@ -244,8 +284,8 @@ public final class LegendaryCommand {
 	 * Builds one legendary from its own recipe, or says why it cannot and hands back an empty stack.
 	 *
 	 * <p>What comes back is checked for the marker, not merely for existing. A datapack can override
-	 * a recipe so it still makes an item and no longer makes the legendary — and an unmarked item is
-	 * not one: handing it out would put a plain mace in a hand under a legendary's name, and
+	 * a definition so it still makes an item and no longer makes the legendary — and an unmarked item
+	 * is not one: handing it out would put a plain mace in a hand under a legendary's name, and
 	 * {@link Pedestal#place} would drop it on the floor of the command with nothing to show.
 	 *
 	 * <p>Empty is the caller's cue to stop, and the message is already sent by then.
@@ -253,12 +293,12 @@ public final class LegendaryCommand {
 	private static ItemStack template(CommandSourceStack source, Legendary legendary) {
 		ItemStack template = legendary.create(source.getServer());
 		if (template.isEmpty()) {
-			source.sendFailure(Component.literal(
-					"No recipe for " + legendary.displayName() + " — a datapack may have removed it."));
+			source.sendFailure(Component.literal("Nothing defines " + legendary.displayName()
+					+ " any more — a datapack may have removed it."));
 			return ItemStack.EMPTY;
 		}
 		if (!legendary.is(template)) {
-			source.sendFailure(Component.literal("The recipe for " + legendary.displayName()
+			source.sendFailure(Component.literal("What defines " + legendary.displayName()
 					+ " no longer makes it — a datapack may have overridden the result."));
 			return ItemStack.EMPTY;
 		}
@@ -276,13 +316,13 @@ public final class LegendaryCommand {
 		throw UNKNOWN_SETTING.create(name);
 	}
 
-	/** Lists every setting for one ability, with the value actually in force. */
-	private static int reportSettings(CommandSourceStack source, Ability ability) {
+	/** Lists the settings one subject has, with the value actually in force. */
+	private static int reportSettings(CommandSourceStack source, Tunable subject) {
 		LegendaryState state = LegendaryState.get(source.getServer());
-		StringBuilder report = new StringBuilder(ability.displayName() + ":");
-		for (LegendarySetting setting : LegendarySetting.values()) {
+		StringBuilder report = new StringBuilder(subject.displayName() + ":");
+		for (LegendarySetting setting : subject.settings()) {
 			report.append("\n  ").append(setting.commandName()).append(" = ")
-					.append(state.setting(ability, setting)).append(' ').append(setting.unit());
+					.append(state.setting(subject, setting)).append(' ').append(setting.unit());
 		}
 		String text = report.toString();
 		source.sendSuccess(() -> Component.literal(text), false);
@@ -297,15 +337,20 @@ public final class LegendaryCommand {
 	 * running rather than only the next one, and needs nothing here to make it: {@link
 	 * AbilityCooldown} reads the setting rather than a copy of it, on every pass.
 	 */
-	private static int setSetting(CommandSourceStack source, Ability ability, LegendarySetting setting,
+	private static int setSetting(CommandSourceStack source, Tunable subject, LegendarySetting setting,
 			int value) {
+		if (!subject.settings().contains(setting)) {
+			source.sendFailure(Component.literal(
+					subject.displayName() + " has no " + setting.commandName() + " to set"));
+			return 0;
+		}
 		if (value < setting.min() || value > setting.max()) {
 			source.sendFailure(Component.literal(setting.commandName() + " must be between "
 					+ setting.min() + " and " + setting.max() + " " + setting.unit()));
 			return 0;
 		}
-		LegendaryState.get(source.getServer()).setSetting(ability, setting, value);
-		source.sendSuccess(() -> Component.literal(ability.displayName() + " " + setting.commandName()
+		LegendaryState.get(source.getServer()).setSetting(subject, setting, value);
+		source.sendSuccess(() -> Component.literal(subject.displayName() + " " + setting.commandName()
 				+ " set to " + value + " " + setting.unit()), true);
 		// One setting changed — a count, in the same currency as every other command here, because
 		// this is what `execute store result` reads.

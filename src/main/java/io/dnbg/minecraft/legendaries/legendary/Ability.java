@@ -1,6 +1,9 @@
 package io.dnbg.minecraft.legendaries.legendary;
 
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -21,15 +24,31 @@ import net.minecraft.world.entity.player.Player;
  * else, so an ability added without an implementation does not compile. Where that implementation
  * lives is its own business: this holds a reference to it, not the code.
  */
-public enum Ability {
-	MOLTEN_BLAST("Molten Blast", MoltenBlast::fire);
+public enum Ability implements Tunable {
+	MOLTEN_BLAST("Molten Blast", MoltenBlast::fire, LegendarySetting.COOLDOWN, LegendarySetting.RADIUS,
+			LegendarySetting.UNMELTED, LegendarySetting.KNOCKBACK);
 
 	private final String displayName;
 	private final BiConsumer<ServerLevel, Player> fire;
+	private final Set<LegendarySetting> settings;
 
-	Ability(String displayName, BiConsumer<ServerLevel, Player> fire) {
+	Ability(String displayName, BiConsumer<ServerLevel, Player> fire, LegendarySetting... settings) {
 		this.displayName = displayName;
 		this.fire = fire;
+		EnumSet<LegendarySetting> declared = EnumSet.noneOf(LegendarySetting.class);
+		Collections.addAll(declared, settings);
+		this.settings = Collections.unmodifiableSet(declared);
+	}
+
+	/**
+	 * The knobs this ability has.
+	 *
+	 * <p>Every carrier of it turns the same ones, which is the point of the settings belonging to the
+	 * ability: two legendaries carrying one blast tune together or they are two blasts.
+	 */
+	@Override
+	public Set<LegendarySetting> settings() {
+		return settings;
 	}
 
 	/**
@@ -43,11 +62,13 @@ public enum Ability {
 	}
 
 	/** How this ability is named in the messages it shows a player. */
+	@Override
 	public String displayName() {
 		return displayName;
 	}
 
 	/** The lowercase name this ability answers to on the command line. */
+	@Override
 	public String commandName() {
 		return name().toLowerCase(Locale.ROOT);
 	}

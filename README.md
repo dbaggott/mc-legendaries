@@ -4,13 +4,14 @@
 [![License](https://img.shields.io/github/license/dbaggott/mc-legendaries)](LICENSE)
 
 A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
-artifacts with their own crafting recipes, their own rules, and no other way to
-obtain them.
+artifacts with their own rules, each defined by a single data file, and no other
+way to obtain them.
 
-Two exist so far: the **Netherite Spear** and the **Mace**.
+Three exist so far: the **Netherite Spear**, the **Mace** and the **Dragon Egg**.
 
-Every legendary shares the same rules — one per world, refused by every container, and returned to
-a shared pedestal rather than ever being lost. What differs is how you get it and what it does.
+Every legendary shares the same rules — one per world, refused by every container, never set down
+as a block, and returned to a shared pedestal rather than ever being lost. What differs is how you
+get it and what it does.
 
 The mod is **common**, not client-only — every rule it adds is decided on the
 logical server, so it installs on a dedicated server and vanilla clients can
@@ -101,6 +102,37 @@ and shows it in a place a worn item could never reach. Reconnecting clears a wai
 
 It is centred on you and it does not care that you are standing there. Expect to fall.
 
+## The Dragon Egg
+
+The egg the dragon leaves, and the only legendary you do not craft. Killing the dragon for the first
+time stands it on the exit portal exactly as it always did, and it comes off that portal the
+legendary, shimmering as if enchanted — however you knock it loose. Punch it onto a torch, piston it
+off its perch, or blow it up: all three hand you the same marked egg. One per world is the End's own
+rule — only a world's first dragon leaves an egg, and re-summoning it never leaves another — so
+nothing here has to enforce it.
+
+Until you take it, it is an ordinary block sitting on the portal, because that is all vanilla ever
+put there. The legendary begins when it becomes an item.
+
+An egg that predates this mod is an ordinary egg until you set it down and take it again. The marker
+is written where the block drops rather than carried by the item, so an old egg is placeable — the
+placement rule only refuses one that is already a legendary — and harvesting it hands back the
+marked one. That is the upgrade path for a world that already had its egg.
+
+**Carrying it.** It gives you **five extra hearts** while it is in your inventory or your hand, and
+takes them back the moment it is not — dropped, handed over, or died with. Above ten hearts when it
+goes, you are back at ten. That number is `hearts`, and `config` turns it.
+
+The new hearts arrive **empty**, the way vanilla's Health Boost does: pick the egg up on four hearts
+and you are on four of fifteen, with room to heal rather than five hearts of free healing. Handing it
+over still costs you whatever you were holding above ten, so dropping it and taking it back is never
+a way to top yourself up.
+
+**Putting it down.** You cannot. It is the first legendary that was ever a block, and placing one
+would be a way to leave it somewhere — so every route to placing it is refused, and it says so above
+your hotbar. Everything else you do while holding it is untouched: chests still open, doors still
+swing, buttons still press.
+
 ## Admin
 
 ```
@@ -115,20 +147,27 @@ It is centred on you and it does not care that you are standing there. Expect to
 ```
 
 ```
-/legendaries config get <ability>                # what that ability is tuned to
-/legendaries config set <ability> <setting> <n>  # cooldown (seconds), radius (blocks),
-                                                 #   unmelted (percent), knockback (percent)
+/legendaries config get <subject>                # what that subject is tuned to
+/legendaries config set <subject> <setting> <n>  # cooldown (seconds), radius (blocks),
+                                                 #   unmelted (percent), knockback (percent),
+                                                 #   hearts
 ```
 
-`<ability>` is `molten_blast`, tab-completed; so is `<setting>`. It names the **ability** rather than
-the item carrying it, because that is what the settings belong to — two carriers of one ability tune
-together.
+`<subject>` is `molten_blast` or `dragon_egg`, tab-completed; so is `<setting>`, and it offers only
+the knobs that subject actually has.
+
+A knob names whatever it belongs to, which is not always the item in your hand. The blast's four
+belong to the **ability** rather than to the mace carrying it, because two carriers of one ability
+tune together. `hearts` belongs to the **legendary**, because what an item grants merely by being
+carried has no ability to belong to. Anything with no knobs at all — the spear, the mace — is not a
+subject and is not offered.
 
 **`config` is a testing tool.** Retuning a blast is a command and a swing rather than an edit, a
 rebuild and a relaunch. Values persist with the world, and `radius` is capped at 16 because cost
 grows with its cube. `cooldown` is measured from your last swing against whatever the setting says
 now, so a new value reaches a wait already counting down — shortening it past the time already
-elapsed ends that wait there and then, and lengthening it extends the same wait.
+elapsed ends that wait there and then, and lengthening it extends the same wait. `hearts` reaches an
+egg already in a pocket the same way, within a second, rather than only the next one picked up.
 
 **`item give` ignores the one-per-world rule** — that is what it is for, whether you are recovering
 a legendary lost to something the backstop could not catch or testing a change. It does not mark the
@@ -147,7 +186,7 @@ slot it cannot see and stranding what is standing in it.
 
 Requires permission level 2. Moving an occupied pedestal carries whatever is on it.
 
-Both legendaries share one pedestal, each in its own slot. Right-clicking takes one at random from
+Every legendary shares one pedestal, each in its own slot. Right-clicking takes one at random from
 whatever is standing there.
 
 ## Installing

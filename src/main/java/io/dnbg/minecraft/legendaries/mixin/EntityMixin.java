@@ -32,9 +32,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       send it home.
  *   <li>{@code UNLOADED_TO_CHUNK} and {@code CHANGED_DIMENSION}, which are bookkeeping. An item in
  *       an unloaded chunk is not lost, it is asleep.
- *   <li>Lava and fire, which never reach here at all: {@code netherite_spear} is registered
- *       {@code .fireResistant()} in vanilla, so it simply does not burn.
  * </ul>
+ *
+ * <p>Fire and lava are caught rather than excluded, and only the spear escapes them on its own —
+ * vanilla registers {@code netherite_spear} fire-resistant, so it never burns to begin with. Nothing
+ * makes that true of the others: a dragon egg burns like any item, and the burn ends in a discard,
+ * which arrives here as every other loss does and sends it home.
  */
 @Mixin(Entity.class)
 public abstract class EntityMixin {

@@ -6,8 +6,9 @@ import java.util.Locale;
  * The knobs {@code /legendaries config} can turn, and what they mean when nobody has turned them.
  *
  * <p>These exist for testing: retuning a blast means a command and a swing rather than an edit, a
- * rebuild and a relaunch. Adding one is an entry here — the command reads its name, its bounds and
- * its default straight off this table, so nothing else has to know the setting exists.
+ * rebuild and a relaunch. Adding one is an entry here plus naming it on whichever {@link Tunable}
+ * has it — the command reads its bounds, its default and its unit straight off this table, so
+ * nothing else has to know the setting exists.
  */
 public enum LegendarySetting {
 	/** Seconds between uses of an ability. Zero removes the wait, which is the point while tuning. */
@@ -40,7 +41,17 @@ public enum LegendarySetting {
 	 * can go rather than a measured ceiling; nobody has looked at what a server makes of an impulse
 	 * that size.
 	 */
-	KNOCKBACK(150, 0, 1000, "percent");
+	KNOCKBACK(150, 0, 1000, "percent"),
+
+	/**
+	 * Extra hearts a legendary grants whoever is carrying it, on top of the ten everybody has.
+	 *
+	 * <p>Hearts rather than health points because hearts are what is on the screen — somebody tuning
+	 * this counts the ones that appeared. 0 removes the bonus, which is the point while testing what
+	 * the rest of the legendary does. 100 is a bound on how far a mistyped digit can go rather than a
+	 * measured ceiling.
+	 */
+	HEARTS(5, 0, 100, "hearts");
 
 	private final int defaultValue;
 	private final int min;

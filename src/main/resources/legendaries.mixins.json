@@ -4,10 +4,12 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "BlockDisplayAccessor",
+    "BlockItemMixin",
     "BundleContentsMixin",
     "CrafterBlockMixin",
     "DisplayTransformAccessor",
     "EntityMixin",
+    "FallingBlockEntityMixin",
     "FoxMixin",
     "HopperBlockEntityMixin",
     "InteractionAccessor",
