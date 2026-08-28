@@ -105,9 +105,14 @@ It is centred on you and it does not care that you are standing there. Expect to
 ## The Dragon Egg
 
 The egg the dragon leaves, and the only legendary you do not craft. Killing the dragon for the first
-time drops it on the exit portal exactly as it always did; what comes off that portal is already the
-legendary, shimmering as if enchanted. One per world is the End's own rule — only a world's first
-dragon leaves an egg, and re-summoning it never leaves another — so nothing here has to enforce it.
+time stands it on the exit portal exactly as it always did, and it comes off that portal the
+legendary, shimmering as if enchanted — however you knock it loose. Punch it onto a torch, piston it
+off its perch, or blow it up: all three hand you the same marked egg. One per world is the End's own
+rule — only a world's first dragon leaves an egg, and re-summoning it never leaves another — so
+nothing here has to enforce it.
+
+Until you take it, it is an ordinary block sitting on the portal, because that is all vanilla ever
+put there. The legendary begins when it becomes an item.
 
 An egg that predates this mod is an ordinary egg and stays one: the marker is written where the block
 drops, and an unmarked copy is deliberately not the legendary.

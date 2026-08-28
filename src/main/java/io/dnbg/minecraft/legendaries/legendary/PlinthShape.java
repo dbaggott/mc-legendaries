@@ -272,7 +272,10 @@ public final class PlinthShape {
 					.append(tier.scaleX()).append(',').append(tier.scaleY()).append(',')
 					.append(tier.scaleZ()).append('@').append(tier.bottomY()).append(';');
 		}
-		shape.append(CASE_BOTTOM_Y).append(':').append(CASE_SIZE);
+		// How many legendaries there are is part of the shape, not just of what stands in it: it sets
+		// every slot's offset and the scale of what sits there, so adding one leaves a world's
+		// existing displays at the old size and the old spacing beside the new ones.
+		shape.append(CASE_BOTTOM_Y).append(':').append(CASE_SIZE).append('/').append(Legendary.values().length);
 		return Integer.toHexString(shape.toString().hashCode());
 	}
 

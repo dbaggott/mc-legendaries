@@ -23,8 +23,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * placement before vanilla had decided, and a legendary in the hand would stop the player opening
  * the chest they were pointing at.
  *
- * <p>Refused on both sides so the block does not ghost in on the client and vanish a tick later. The
- * message is the server's alone, which {@link Actionbar#say} already arranges.
+ * <p>The refusal is the server's alone, and cannot be anything else: the marker lives in
+ * {@code minecraft:custom_data}, which is persistent and never sent to a client, so a client holding
+ * the egg sees an ordinary block item and predicts the placement. The block appears for the tick it
+ * takes the server's answer to arrive, and then goes. That is the price of the marker being
+ * invisible to vanilla clients, which is the property the whole mod is built on.
  */
 @Mixin(BlockItem.class)
 public abstract class BlockItemMixin {

@@ -66,7 +66,16 @@ public final class CarriedHearts {
 			maxHealth.removeModifier(MODIFIER_ID);
 			return;
 		}
-		maxHealth.addOrUpdateTransientModifier(new AttributeModifier(MODIFIER_ID,
-				(double) hearts * HEALTH_PER_HEART, AttributeModifier.Operation.ADD_VALUE));
+		double bonus = (double) hearts * HEALTH_PER_HEART;
+		// Only when it actually moves. addOrUpdateTransientModifier compares the modifier it is given
+		// against the stored one by reference, and a fresh one every sweep never matches — so
+		// re-applying an unchanged bonus marks the attribute dirty and resends it to the carrier and
+		// everyone tracking them, once a second, for as long as they hold it.
+		AttributeModifier applied = maxHealth.getModifier(MODIFIER_ID);
+		if (applied != null && applied.amount() == bonus) {
+			return;
+		}
+		maxHealth.addOrUpdateTransientModifier(
+				new AttributeModifier(MODIFIER_ID, bonus, AttributeModifier.Operation.ADD_VALUE));
 	}
 }

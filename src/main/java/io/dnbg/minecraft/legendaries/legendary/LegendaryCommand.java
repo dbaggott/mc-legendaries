@@ -284,8 +284,8 @@ public final class LegendaryCommand {
 	 * Builds one legendary from its own recipe, or says why it cannot and hands back an empty stack.
 	 *
 	 * <p>What comes back is checked for the marker, not merely for existing. A datapack can override
-	 * a recipe so it still makes an item and no longer makes the legendary — and an unmarked item is
-	 * not one: handing it out would put a plain mace in a hand under a legendary's name, and
+	 * a definition so it still makes an item and no longer makes the legendary — and an unmarked item
+	 * is not one: handing it out would put a plain mace in a hand under a legendary's name, and
 	 * {@link Pedestal#place} would drop it on the floor of the command with nothing to show.
 	 *
 	 * <p>Empty is the caller's cue to stop, and the message is already sent by then.
@@ -293,12 +293,12 @@ public final class LegendaryCommand {
 	private static ItemStack template(CommandSourceStack source, Legendary legendary) {
 		ItemStack template = legendary.create(source.getServer());
 		if (template.isEmpty()) {
-			source.sendFailure(Component.literal(
-					"No recipe for " + legendary.displayName() + " — a datapack may have removed it."));
+			source.sendFailure(Component.literal("Nothing defines " + legendary.displayName()
+					+ " any more — a datapack may have removed it."));
 			return ItemStack.EMPTY;
 		}
 		if (!legendary.is(template)) {
-			source.sendFailure(Component.literal("The recipe for " + legendary.displayName()
+			source.sendFailure(Component.literal("What defines " + legendary.displayName()
 					+ " no longer makes it — a datapack may have overridden the result."));
 			return ItemStack.EMPTY;
 		}

@@ -158,6 +158,23 @@ public enum Legendary implements Tunable {
 		return data != null && data.copyTag().getBooleanOr(marker, false);
 	}
 
+	/**
+	 * Which legendary is <em>made of</em> this item, if any.
+	 *
+	 * <p>The one test in the mod that does not read a marker, because it runs where no marker exists
+	 * yet: vanilla is about to hand out a plain item, and this decides whether the legendary is what
+	 * it should have been handing out. Everything downstream of that answer reads the marker as
+	 * usual — see {@link FallingBlockEntityMixin}, which is the only caller.
+	 */
+	public static Optional<Legendary> madeOf(Item item) {
+		for (Legendary legendary : values()) {
+			if (legendary.item == item) {
+				return Optional.of(legendary);
+			}
+		}
+		return Optional.empty();
+	}
+
 	/** Which legendary this stack is, if any. */
 	public static Optional<Legendary> of(ItemStack stack) {
 		for (Legendary legendary : values()) {
