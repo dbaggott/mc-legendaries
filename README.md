@@ -4,8 +4,8 @@
 [![License](https://img.shields.io/github/license/dbaggott/mc-legendaries)](LICENSE)
 
 A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
-artifacts with their own crafting recipes, their own rules, and no other way to
-obtain them.
+artifacts with their own rules, each defined by a single data file, and no other
+way to obtain them.
 
 Three exist so far: the **Netherite Spear**, the **Mace** and the **Dragon Egg**.
 
@@ -114,8 +114,10 @@ nothing here has to enforce it.
 Until you take it, it is an ordinary block sitting on the portal, because that is all vanilla ever
 put there. The legendary begins when it becomes an item.
 
-An egg that predates this mod is an ordinary egg and stays one: the marker is written where the block
-drops, and an unmarked copy is deliberately not the legendary.
+An egg that predates this mod is an ordinary egg until you set it down and take it again. The marker
+is written where the block drops rather than carried by the item, so an old egg is placeable — the
+placement rule only refuses one that is already a legendary — and harvesting it hands back the
+marked one. That is the upgrade path for a world that already had its egg.
 
 **Carrying it.** It gives you **five extra hearts** while it is in your inventory or your hand, and
 takes them back the moment it is not — dropped, handed over, or died with. Above ten hearts when it

@@ -164,7 +164,8 @@ public enum Legendary implements Tunable {
 	 * <p>The one test in the mod that does not read a marker, because it runs where no marker exists
 	 * yet: vanilla is about to hand out a plain item, and this decides whether the legendary is what
 	 * it should have been handing out. Everything downstream of that answer reads the marker as
-	 * usual — see {@link FallingBlockEntityMixin}, which is the only caller.
+	 * usual — see {@link io.dnbg.minecraft.legendaries.mixin.FallingBlockEntityMixin}, which is the
+	 * only caller.
 	 */
 	public static Optional<Legendary> madeOf(Item item) {
 		for (Legendary legendary : values()) {
