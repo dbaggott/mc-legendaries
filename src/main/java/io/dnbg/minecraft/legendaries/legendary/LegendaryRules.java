@@ -35,10 +35,13 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class LegendaryRules {
 	/**
-	 * Speed II, refreshed on a cadence shorter than its own duration so it never visibly flickers
-	 * and never outlives the spear leaving the inventory by more than one refresh.
+	 * How often what a legendary grants by being carried is put back where it belongs.
+	 *
+	 * <p>Shorter than an effect's own duration, so the effect never visibly flickers — and short
+	 * enough that neither an effect nor a heart outlives a legendary leaving the inventory by more
+	 * than one pass.
 	 */
-	private static final int EFFECT_INTERVAL_TICKS = 20;
+	private static final int BONUS_INTERVAL_TICKS = 20;
 	private static final int EFFECT_DURATION_TICKS = 40;
 
 	/** Reset per session; the pedestal is raised once the site's chunk is genuinely loaded. */
@@ -53,7 +56,7 @@ public final class LegendaryRules {
 		ServerEntityEvents.ENTITY_LOAD.register(Pedestal::discardStaleOnLoad);
 		spinPedestal();
 		settleCraters();
-		grantCarriedEffects();
+		grantCarriedBonuses();
 		wireAbilities();
 		showAbilityWaits();
 		wireEntityInteractions();
@@ -116,9 +119,10 @@ public final class LegendaryRules {
 		ServerTickEvents.END_SERVER_TICK.register(MoltenBlast::settle);
 	}
 
-	private static void grantCarriedEffects() {
+	/** Everything a legendary grants merely by being carried, put back on one cadence. */
+	private static void grantCarriedBonuses() {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (server.getTickCount() % EFFECT_INTERVAL_TICKS != 0) {
+			if (server.getTickCount() % BONUS_INTERVAL_TICKS != 0) {
 				return;
 			}
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -130,15 +134,16 @@ public final class LegendaryRules {
 						}
 					});
 				}
+				CarriedHearts.refresh(server, player);
 			}
 		});
 	}
 
 	/**
-	 * Whether the player is carrying the spear, in hand or in inventory.
+	 * Whether the player is carrying this legendary, in hand or in inventory.
 	 *
-	 * <p>Only the player's own slots count. A spear nested inside a shulker box in the inventory
-	 * does not — though nothing can put it there, since the container rules refuse it.
+	 * <p>Only the player's own slots count. One nested inside a shulker box in the inventory does
+	 * not — though nothing can put it there, since the container rules refuse it.
 	 */
 	public static boolean carrying(Player player, Legendary legendary) {
 		for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
@@ -168,7 +173,7 @@ public final class LegendaryRules {
 				return InteractionResult.PASS;
 			}
 			Actionbar.say(player, Component.literal(
-					legendaryName(player.getItemInHand(hand)) + " will not be left on display."));
+					Legendary.nameOf(player.getItemInHand(hand)) + " will not be left on display."));
 			return InteractionResult.FAIL;
 		});
 	}
@@ -292,11 +297,6 @@ public final class LegendaryRules {
 	/** Keeps every running wait on its owner's screen. */
 	private static void showAbilityWaits() {
 		ServerTickEvents.END_SERVER_TICK.register(AbilityCooldown::showWaits);
-	}
-
-	/** How to name whatever legendary this stack is, for a message aimed at a player. */
-	private static String legendaryName(ItemStack stack) {
-		return Legendary.of(stack).map(Legendary::displayName).orElse("That");
 	}
 
 }
