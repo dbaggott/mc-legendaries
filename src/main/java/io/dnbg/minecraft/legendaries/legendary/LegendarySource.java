@@ -46,8 +46,17 @@ public sealed interface LegendarySource {
 	 *
 	 * <p>{@code assemble} ignores its input for a fixed result, so an empty crafting grid is enough
 	 * to ask the recipe what it makes.
+	 *
+	 * <p>A {@link CraftRequirement} rides here rather than on {@link Legendary} because only a
+	 * crafted legendary can have one — there is no grid to put a condition on when a legendary is dug
+	 * out of a block.
 	 */
-	record FromRecipe(String recipeId) implements LegendarySource {
+	record FromRecipe(String recipeId, CraftRequirement requirement) implements LegendarySource {
+		/** A recipe whose ingredients the file states in full, which is most of them. */
+		public FromRecipe(String recipeId) {
+			this(recipeId, null);
+		}
+
 		@Override
 		public ItemStack create(MinecraftServer server) {
 			ResourceKey<Recipe<?>> key = ResourceKey.create(Registries.RECIPE, Identifier.parse(recipeId));

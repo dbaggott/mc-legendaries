@@ -1,0 +1,49 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "NEN",
+    "BPB",
+    "CSC"
+  ],
+  "key": {
+    "N": "minecraft:netherite_ingot",
+    "E": "minecraft:deepslate_emerald_ore",
+    "B": "minecraft:enchanted_book",
+    "P": "minecraft:netherite_pickaxe",
+    "C": "minecraft:deepslate_coal_ore",
+    "S": "minecraft:sculk_shrieker"
+  },
+  "result": {
+    "id": "minecraft:netherite_pickaxe",
+    "components": {
+      "minecraft:custom_data": {
+        "legendaries_pickaxe": true
+      },
+      "minecraft:unbreakable": {},
+      "minecraft:enchantments": {
+        "minecraft:efficiency": 6,
+        "minecraft:silk_touch": 1
+      },
+      "minecraft:tool": {
+        "rules": [
+          {
+            "blocks": "#minecraft:incorrect_for_netherite_tool",
+            "correct_for_drops": false
+          },
+          {
+            "blocks": "#minecraft:mineable/pickaxe",
+            "speed": 9.0,
+            "correct_for_drops": true
+          },
+          {
+            "blocks": "minecraft:gravel",
+            "speed": 9.0,
+            "correct_for_drops": true
+          }
+        ],
+        "damage_per_block": 1
+      }
+    }
+  }
+}

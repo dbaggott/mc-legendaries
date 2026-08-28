@@ -1,8 +1,10 @@
 package io.dnbg.minecraft.legendaries.mixin;
 
 import io.dnbg.minecraft.legendaries.legendary.Actionbar;
+import io.dnbg.minecraft.legendaries.legendary.CraftRequirement;
 import io.dnbg.minecraft.legendaries.legendary.Legendary;
 import io.dnbg.minecraft.legendaries.legendary.LegendaryState;
+import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Inventory;
@@ -77,6 +79,37 @@ public abstract class SlotMixin {
 			return;
 		}
 		Actionbar.say(player, Component.literal(legendary.displayName() + " has already been crafted."));
+		cir.setReturnValue(false);
+	}
+
+	/**
+	 * Refuses a grid that matched the recipe without meeting what the recipe meant.
+	 *
+	 * <p>A vanilla ingredient can name an item type and nothing else, so a recipe asking for an
+	 * enchanted book accepts any book. {@link CraftRequirement} is the rest of the condition, and
+	 * this is where it is enforced — on taking the result, beside the one-per-world gate above,
+	 * because both are things the recipe itself could not decide.
+	 *
+	 * <p>Saying why is the point. A player holding nine correct-looking items and a result that
+	 * silently refuses has nothing to go on, so the requirement carries its own message.
+	 */
+	@Inject(method = "mayPickup", at = @At("HEAD"), cancellable = true)
+	private void legendaries$refuseUnmetCraftRequirement(Player player, CallbackInfoReturnable<Boolean> cir) {
+		Slot self = (Slot) (Object) this;
+		if (!(self instanceof ResultSlot) || player.level().isClientSide()) {
+			return;
+		}
+		CraftRequirement requirement = Legendary.of(self.getItem())
+				.flatMap(Legendary::craftRequirement)
+				.orElse(null);
+		if (requirement == null) {
+			return;
+		}
+		List<ItemStack> grid = ((ResultSlotAccessor) self).legendaries$craftSlots().getItems();
+		if (requirement.satisfiedBy(grid)) {
+			return;
+		}
+		Actionbar.say(player, Component.literal(requirement.unmet()));
 		cir.setReturnValue(false);
 	}
 }

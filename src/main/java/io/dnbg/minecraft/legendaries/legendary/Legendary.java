@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Blocks;
 
 /**
@@ -62,7 +63,24 @@ public enum Legendary implements Tunable {
 	 */
 	DRAGON_EGG("legendaries_dragon_egg", Items.DRAGON_EGG, "The Dragon Egg",
 			new LegendarySource.FromBlockDrop(Blocks.DRAGON_EGG), null, 0, null,
-			LegendarySetting.HEARTS);
+			LegendarySetting.HEARTS),
+
+	/**
+	 * Crafted from a netherite pickaxe, two Efficiency V books, and ore that only Silk Touch can
+	 * lift — which is what the pickaxe then carries, so the one that makes it could have mined its
+	 * own ingredients.
+	 *
+	 * <p>Vanilla pickaxes are untouched: this has a recipe of its own rather than overriding
+	 * theirs, so every ordinary pickaxe is still craftable and this is the one that is not ordinary.
+	 *
+	 * <p>The recipe file cannot ask which enchantment is on a book, so the Efficiency V part rides
+	 * on the source as a {@link CraftRequirement}.
+	 */
+	PICKAXE("legendaries_pickaxe", Items.NETHERITE_PICKAXE, "The Legendary Pickaxe",
+			new LegendarySource.FromRecipe("legendaries:legendary_pickaxe",
+					new CraftRequirement.EveryBookHas(Enchantments.EFFICIENCY, 5,
+							"Both books must be Efficiency V.")),
+			MobEffects.FIRE_RESISTANCE, 0, null);
 
 	private final String marker;
 	private final Item item;
@@ -116,6 +134,18 @@ public enum Legendary implements Tunable {
 	@Override
 	public String commandName() {
 		return name().toLowerCase(Locale.ROOT);
+	}
+
+	/**
+	 * The condition on the crafting grid that this legendary's recipe means but cannot state.
+	 *
+	 * <p>Empty for a legendary that is not crafted at all, and for the ordinary case where the
+	 * ingredients the file lists are the whole of what it asks for.
+	 */
+	public Optional<CraftRequirement> craftRequirement() {
+		return source instanceof LegendarySource.FromRecipe recipe
+				? Optional.ofNullable(recipe.requirement())
+				: Optional.empty();
 	}
 
 	/** Builds one, by asking whatever data file defines it; see {@link LegendarySource}. */

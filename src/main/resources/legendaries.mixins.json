@@ -16,6 +16,7 @@
     "ItemDisplayAccessor",
     "ItemEntityMixin",
     "MobMixin",
+    "ResultSlotAccessor",
     "ResultSlotMixin",
     "ShulkerBoxSlotMixin",
     "SlotMixin"
