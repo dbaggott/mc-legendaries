@@ -21,6 +21,12 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
  * clamps current health down to the new maximum. A player at fifteen hearts who hands the egg over
  * is at ten, and nothing here has to know which hearts were the extra ones.
  *
+ * <p>Gaining them is deliberately not the mirror of that. The new hearts arrive <em>empty</em> — a
+ * player on four hearts who picks the egg up is on four of fifteen and has to heal into the rest,
+ * which is how vanilla's own Health Boost behaves. Filling them instead would make dropping the egg
+ * and picking it back up a free heal of the whole bonus, repeatable until full. The asymmetry is
+ * what closes that, and it only ever ratchets health down.
+ *
  * <p>The modifier is transient, so nothing about the bonus is written to the world and this sweep is
  * the only thing that decides: somebody who loses the egg while offline comes back without the
  * hearts. The cost is that reconnecting <em>with</em> it costs the extra health, though not the

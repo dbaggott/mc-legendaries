@@ -116,6 +116,11 @@ drops, and an unmarked copy is deliberately not the legendary.
 takes them back the moment it is not — dropped, handed over, or died with. Above ten hearts when it
 goes, you are back at ten. That number is `hearts`, and `config` turns it.
 
+The new hearts arrive **empty**, the way vanilla's Health Boost does: pick the egg up on four hearts
+and you are on four of fifteen, with room to heal rather than five hearts of free healing. Handing it
+over still costs you whatever you were holding above ten, so dropping it and taking it back is never
+a way to top yourself up.
+
 **Putting it down.** You cannot. It is the first legendary that was ever a block, and placing one
 would be a way to leave it somewhere — so every route to placing it is refused, and it says so above
 your hotbar. Everything else you do while holding it is untouched: chests still open, doors still

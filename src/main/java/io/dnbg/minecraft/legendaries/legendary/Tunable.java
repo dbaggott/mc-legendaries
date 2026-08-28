@@ -5,10 +5,10 @@ import java.util.Set;
 /**
  * Something {@code /legendaries config} can turn a knob on.
  *
- * <p>Two kinds of thing have knobs, and they are not the same kind of thing. An {@link Ability}'s
- * belong to the ability rather than to whichever legendary fired it, because one ability can be
- * carried by several at once and they have to tune together. A {@link Legendary}'s belong to the
- * item, because what it grants merely by being carried has no ability to hang off.
+ * <p>Knobs do not all belong to the same kind of thing. An {@link Ability}'s belong to the ability
+ * rather than to whichever legendary fired it, because one ability can be carried by several at once
+ * and they have to tune together. A {@link Legendary}'s belong to the item, because what it grants
+ * merely by being carried has no ability to hang off.
  *
  * <p>They share one command argument because somebody configuring something names the thing rather
  * than its category. That puts both sets of names in one namespace, and their saved settings in one
