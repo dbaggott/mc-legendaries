@@ -7,7 +7,8 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own rules, each defined by a single data file, and no other
 way to obtain them.
 
-Three exist so far: the **Netherite Spear**, the **Mace** and the **Dragon Egg**.
+Four exist so far: the **Netherite Spear**, the **Mace**, the **Dragon Egg** and the
+**Legendary Pickaxe**.
 
 Every legendary shares the same rules — one per world, refused by every container, never set down
 as a block, and returned to a shared pedestal rather than ever being lost. What differs is how you
@@ -132,6 +133,42 @@ a way to top yourself up.
 would be a way to leave it somewhere — so every route to placing it is refused, and it says so above
 your hotbar. Everything else you do while holding it is untouched: chests still open, doors still
 swing, buttons still press.
+
+## The Legendary Pickaxe
+
+**Ordinary pickaxes are untouched.** Every vanilla pickaxe recipe still works and every pickaxe they
+make is still a pickaxe — this one has a recipe of its own rather than replacing theirs. It is the
+only legendary that shares its item with something you can still make normally.
+
+**Getting it.** One crafting recipe, around a netherite pickaxe:
+
+|   |   |   |
+|---|---|---|
+| Netherite ingot | Deepslate emerald ore | Netherite ingot |
+| Efficiency V book | Netherite pickaxe | Efficiency V book |
+| Deepslate coal ore | Sculk shrieker | Deepslate coal ore |
+
+Every ore in it, and the shrieker, can only be picked up with Silk Touch — which is what the pickaxe
+then carries, so the tool that makes one could have mined its own ingredients.
+
+**The books are checked when you take the result, not when the recipe matches.** A vanilla ingredient
+names an item type and nothing else, so the recipe can ask for an enchanted book and cannot ask what
+is written in it. Two books of the wrong enchantment will assemble a pickaxe in the result slot that
+refuses to come out, and says why. Like the one-per-world rule, this is a thing the recipe means and
+cannot state.
+
+**Carrying it.** It is unbreakable, comes with **Efficiency VI and Silk Touch** — a level above the
+enchanting table's maximum, which only a recipe can write — and grants **Fire Resistance** for as
+long as it is in your inventory or your hand.
+
+**Gravel.** It digs gravel as fast as a shovel of the same metal would, which with Efficiency VI on
+top makes it an Efficiency VI netherite shovel for that one block. Nothing else a shovel is for
+changes; dirt and sand are still a pickaxe's problem. Note that Silk Touch means gravel always comes
+up as gravel — this is not the tool to dig flint with.
+
+**Keeping it.** The rules every legendary shares: refused by every container, never left on display,
+and returned to the pedestal rather than lost. It is crafted, so it is one per world — the recipe
+still previews after that, and refuses.
 
 ## Admin
 

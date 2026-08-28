@@ -13,9 +13,15 @@ jobs:
     #
     # The range is claimable because the vanilla surface this mod is built on is
     # present unchanged in all four lines: the same seven spear recipes, the same
-    # data/minecraft/enchantment/lunge.json, and the same mace recipe over
-    # heavy_core and breeze_rod. Widening the range means re-checking all of
-    # that, not only the spears.
+    # data/minecraft/enchantment/lunge.json, the same mace recipe over heavy_core
+    # and breeze_rod, the same dragon egg block loot table, the deepslate ores and
+    # sculk_shrieker the pickaxe is crafted from, and the minecraft:tool component
+    # shape with an empty #incorrect_for_netherite_tool. Widening the range means
+    # re-checking all of that, not only the spears.
+    #
+    # A mixin target is a string, so a rename passes every row here and fails at
+    # load instead. The targets are checked per line by hand rather than by this
+    # matrix; nothing below starts the game.
     #
     # The 26.1 row is the *floor* row: oldest supported MC paired with the exact
     # `fabric-api` minimum declared in fabric.mod.json.

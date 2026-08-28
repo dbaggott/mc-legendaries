@@ -1,9 +1,10 @@
 # Legendaries
 
-Adds **legendary** items to Minecraft: unique, one-per-world artifacts with their own crafting
-recipes, their own rules, and no other way to obtain them. Two exist so far — the **Mace** and the
-**Netherite Spear**. Both are one per world, refused by every container, and returned to a shared
-pedestal rather than ever being lost.
+Adds **legendary** items to Minecraft: unique, one-per-world artifacts with their own rules, each
+defined by a single data file, and no other way to obtain them. Four exist so far — the **Netherite
+Spear**, the **Mace**, the **Dragon Egg** and the **Legendary Pickaxe**. Every one is one per world,
+refused by every container, never set down as a block, and returned to a shared pedestal rather than
+ever being lost.
 
 Install it on whichever side runs the world — your own game for single-player, or the server.
 **Other players need nothing.** The mod registers no custom item, block or data component, so a
@@ -70,15 +71,54 @@ back.
 If a mob gets hold of it despite the refusals, it returns to the pedestal when that mob dies or
 despawns rather than leaving with it.
 
+## The Dragon Egg
+
+The egg the dragon leaves, and the only legendary you do not craft. It comes off the exit portal
+already legendary and shimmering, however you knock it loose — onto a torch, with a piston, or with
+TNT. One per world is the End's own rule: only a world's first dragon leaves an egg.
+
+**It cannot be placed as a block.** Setting it down would be a way to leave it somewhere, so every
+route to placing one is refused. Chests, doors and everything else still work while you hold it.
+
+**Carrying it gives you five extra hearts**, lost the moment it leaves your hands by any route. They
+arrive empty, the way Health Boost's do, so passing the egg around is never a way to top anybody up.
+How many hearts is a setting.
+
+## The Legendary Pickaxe
+
+**Ordinary pickaxes are untouched** — this has a recipe of its own rather than replacing theirs, so
+it is the one legendary sharing its item with something you can still make normally.
+
+|   |   |   |
+|---|---|---|
+| Netherite ingot | Deepslate emerald ore | Netherite ingot |
+| Efficiency V book | Netherite pickaxe | Efficiency V book |
+| Deepslate coal ore | Sculk shrieker | Deepslate coal ore |
+
+Every ore in it, and the shrieker, are Silk Touch drops — which is what the pickaxe then carries, so
+the tool that makes one could have mined its own ingredients.
+
+It is unbreakable, comes with **Efficiency VI and Silk Touch** — a level past what an enchanting
+table will give you — and grants **Fire Resistance** for as long as you are carrying it. It digs
+gravel as fast as a netherite shovel does, which with Efficiency VI on top makes it an Efficiency VI
+shovel for that one block.
+
 ## Admin
 
 ```
-/legendaries pedestal where      # where it is, and whether the spear is on it
-/legendaries pedestal here       # move it to where you are standing
-/legendaries pedestal at <x y z> # move it to a specific block
+/legendaries pedestal where                      # where it is, and what is standing on it
+/legendaries pedestal here                       # move it to where you are standing
+/legendaries pedestal at <x y z>                 # move it to a specific block
+
+/legendaries item give <players|pedestal> <name>    # hand one out, or stand it in the case
+/legendaries item delete <players|pedestal> <name>  # take every copy back
+
+/legendaries config get <subject>                # what that subject is tuned to
+/legendaries config set <subject> <setting> <n>  # turn one of its knobs
 ```
 
-Requires permission level 2. Moving an occupied pedestal carries the spear with it.
+Requires permission level 2. Moving an occupied pedestal carries whatever is on it. Every legendary
+shares the one pedestal, each in its own slot; right-clicking takes one back.
 
 ## Requires
 
