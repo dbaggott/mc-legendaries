@@ -20,6 +20,11 @@
       "minecraft:custom_data": {
         "legendaries_pickaxe": true
       },
+      "minecraft:custom_model_data": {
+        "strings": [
+          "legendaries:pickaxe"
+        ]
+      },
       "minecraft:unbreakable": {},
       "minecraft:enchantments": {
         "minecraft:efficiency": 6,
