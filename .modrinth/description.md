@@ -91,9 +91,10 @@ How many hearts is a setting.
 way the Legendary Sword and Legendary Axe do.
 
 **It looks the part.** A gem of molten amber set into the netherite, so a legendary that shares its
-item with an ordinary tool does not share its appearance. That arrives as a small resource pack the
-server offers you when you join — optional, and declining it costs nothing but the look: the pack
-retextures only the legendaries, and every ordinary pickaxe, sword and axe is untouched either way.
+item with an ordinary tool does not share its appearance. That arrives as a small resource pack — a
+dedicated server offers it when you join, and in single-player you install it yourself from the
+GitHub release. Either way it is optional, and going without costs nothing but the look: the pack
+retextures only the legendaries, and every ordinary pickaxe, sword and axe is untouched.
 
 |   |   |   |
 |---|---|---|

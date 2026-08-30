@@ -171,8 +171,9 @@ and returned to the pedestal rather than lost. It is crafted, so it is one per w
 still previews after that, and refuses.
 
 **How it looks.** The netherite pickaxe with a gem of amber set at the elbow, so a legendary that
-shares its item with an ordinary tool does not share its appearance. The mod offers a small resource pack when you join and
-the item carries a `minecraft:custom_model_data` string; the pack's item definition selects on that
+shares its item with an ordinary tool does not share its appearance. A small resource pack carries
+the look — a dedicated server offers it on join, and single-player installs it by hand — and the
+item carries a `minecraft:custom_model_data` string; the pack's item definition selects on that
 string and names the vanilla model as its fallback, so the texture only ever replaces *this*
 pickaxe. Decline the pack, or play without it, and you see a netherite pickaxe — nothing else
 changes, and nothing renders wrong. See [Textures](#textures).
@@ -318,9 +319,22 @@ The same pairing repeats for the Legendary Sword and the Legendary Axe: one item
 one marker each, one texture each. Every ordinary netherite sword, axe and pickaxe falls through to
 the vanilla model it always had.
 
-**Single-player too.** The integrated server answers the same question the dedicated one does, so
-your own world offers you the pack the same way. To apply it by hand instead, the zip is on the
-release next to the jar and goes in `.minecraft/resourcepacks`.
+**Single-player installs it by hand.** The zip is on the GitHub release next to the jar. Drop it in
+`.minecraft/resourcepacks`, then turn it on once in Options → Resource Packs — dropping it in only
+makes it available, and the selection is the part that sticks across sessions.
+
+Only a dedicated server offers the pack, and that is deliberate. Vanilla answers
+`getServerResourcePack` non-empty on the dedicated server alone; making an integrated server answer it too
+puts the client's resource reload inside its own join handshake, and the join does not finish — the
+world sits on "Loading Terrain" with nothing crashed. A hand-installed pack has none of that
+problem, and unlike the offer it does not ask again every time you open the world: single-player has
+no server-list entry, which is where a "yes, always" answer would have to live.
+
+**Open to LAN counts as single-player here.** A world opened to LAN is still an integrated server,
+so guests are not offered the pack either and see ordinary tools. Nothing was ever broken for them —
+they join over a real connection rather than an in-process one — but the question the mod answers is
+asked once per server, not once per player, so keeping their offer while dropping the host's would
+take a different hook. Hand out the zip alongside the invite.
 
 **A pickaxe crafted before this keeps the old look.** An item's components are fixed when it is
 made, and the marker is written by the recipe — so it rides on pickaxes crafted from here on, and a
