@@ -218,10 +218,10 @@ to the pedestal rather than lost, and one per world each.
 ## Names
 
 Every legendary but the Dragon Egg carries a name of its own — **Legendary Spear**, **Legendary
-Mace**, **Legendary Pickaxe**, **Legendary Sword** and **Legendary Axe** — with the word *Legendary*
-written as a gradient of the amber the tool textures set into the netherite, deep at the L and
-bright by the y. What follows it asks for no colour, so a tooltip writes it in the colour vanilla
-gives that item's name.
+Mace**, **Legendary Pickaxe**, **Legendary Sword** and **Legendary Axe** — written as a gradient of
+the amber the tool textures set into the netherite, deep at the first letter and bright at the last.
+The ramp is fitted to the name rather than to a fixed number of steps, so every one of them runs the
+whole way from end to end whatever its length.
 
 The egg is the one that needs none. Every other legendary shares its item with an ordinary tool a
 player can be holding at the same time, and the name is what tells the two apart — where a dragon egg
@@ -259,7 +259,9 @@ item that already exists.
 ```
 
 `<subject>` is `molten_blast` or `dragon_egg`, tab-completed; so is `<setting>`, and it offers only
-the knobs that subject actually has.
+the knobs that subject actually has. A legendary answers to the name the item itself carries —
+`legendary_pickaxe`, `legendary_spear`, and `dragon_egg` for the one that keeps vanilla's name. So
+does `item give`.
 
 A knob names whatever it belongs to, which is not always the item in your hand. The blast's four
 belong to the **ability** rather than to the mace carrying it, because two carriers of one ability

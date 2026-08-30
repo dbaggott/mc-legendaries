@@ -53,8 +53,11 @@ public final class AbilityCooldown {
 	 * property this whole mod is built on. The time's is a palette entry and stays one:
 	 * {@link ChatFormatting#AQUA} is vanilla's colour for {@link
 	 * net.minecraft.world.item.Rarity#RARE}, which is what an enchanted item's name is written in.
+	 *
+	 * <p>The name's is the deep end of the amber a legendary's own name is written in, so the two
+	 * read as the same mod talking.
 	 */
-	private static final int NAME_COLOUR = 0xFFAB57;
+	private static final int NAME_COLOUR = 0xE96C0C;
 	private static final ChatFormatting REMAINING_COLOUR = ChatFormatting.AQUA;
 
 	/**

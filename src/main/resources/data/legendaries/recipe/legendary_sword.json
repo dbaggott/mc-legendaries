@@ -24,15 +24,20 @@
         "text": "",
         "extra": [
           { "text": "L", "color": "#E96C0C" },
-          { "text": "e", "color": "#EB7814" },
-          { "text": "g", "color": "#ED841D" },
-          { "text": "e", "color": "#EF9025" },
-          { "text": "n", "color": "#F09C2E" },
-          { "text": "d", "color": "#F2A736" },
-          { "text": "a", "color": "#F4B33E" },
-          { "text": "r", "color": "#F6BF47" },
-          { "text": "y", "color": "#F8CB4F" },
-          { "text": " Sword" }
+          { "text": "e", "color": "#EA7311" },
+          { "text": "g", "color": "#EB7A16" },
+          { "text": "e", "color": "#EC801A" },
+          { "text": "n", "color": "#ED871F" },
+          { "text": "d", "color": "#EE8E24" },
+          { "text": "a", "color": "#EF9529" },
+          { "text": "r", "color": "#F09C2E" },
+          { "text": "y", "color": "#F2A232" },
+          { "text": " ", "color": "#F3A937" },
+          { "text": "S", "color": "#F4B03C" },
+          { "text": "w", "color": "#F5B741" },
+          { "text": "o", "color": "#F6BD45" },
+          { "text": "r", "color": "#F7C44A" },
+          { "text": "d", "color": "#F8CB4F" }
         ]
       },
       "minecraft:custom_model_data": {

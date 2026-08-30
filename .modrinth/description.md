@@ -139,10 +139,10 @@ Both get a look of their own from the same optional resource pack the pickaxe us
 ## Names
 
 Every legendary but the Dragon Egg carries a name of its own — **Legendary Spear**, **Legendary
-Mace**, **Legendary Pickaxe**, **Legendary Sword** and **Legendary Axe** — with the word *Legendary*
-written as a gradient of the same amber the textures set into the netherite. The egg is the one that
-needs none: every other legendary shares its item with an ordinary tool you can be holding at the
-same time, and the name is what tells them apart.
+Mace**, **Legendary Pickaxe**, **Legendary Sword** and **Legendary Axe** — each of them written as a
+gradient of the same amber the textures set into the netherite, deep at the first letter and bright
+at the last. The egg is the one that needs none: every other legendary shares its item with an
+ordinary tool you can be holding at the same time, and the name is what tells them apart.
 
 The name is an ordinary vanilla component, so it reaches every client with nothing installed — no
 resource pack needed, unlike the textures. A legendary crafted before this update has no name; an
