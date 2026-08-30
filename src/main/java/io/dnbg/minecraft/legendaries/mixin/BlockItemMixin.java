@@ -40,7 +40,7 @@ public abstract class BlockItemMixin {
 		Player player = context.getPlayer();
 		if (player != null) {
 			Actionbar.say(player, Component.literal(
-					Legendary.nameOf(context.getItemInHand()) + " will not be set down as a block."));
+					Legendary.nameOf(context.getItemInHand()) + " cannot be placed."));
 		}
 		cir.setReturnValue(InteractionResult.FAIL);
 	}

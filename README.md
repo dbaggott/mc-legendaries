@@ -215,6 +215,29 @@ is for.
 **They keep the rules the others do** — refused by every container, never left on display, returned
 to the pedestal rather than lost, and one per world each.
 
+## Names
+
+Every legendary but the Dragon Egg carries a name of its own — **Legendary Spear**, **Legendary
+Mace**, **Legendary Pickaxe**, **Legendary Sword** and **Legendary Axe** — with the word *Legendary*
+written as a gradient of the amber the tool textures set into the netherite, deep at the L and
+bright by the y. What follows it asks for no colour, so a tooltip writes it in the colour vanilla
+gives that item's name.
+
+The egg is the one that needs none. Every other legendary shares its item with an ordinary tool a
+player can be holding at the same time, and the name is what tells the two apart — where a dragon egg
+is the only one there has ever been.
+
+The name is `minecraft:item_name` rather than `minecraft:custom_name` — the item's own name rather
+than a rename. Vanilla italicises a renamed item and leaves a named one upright, so this is the
+component that reads as what the item *is* rather than as what somebody called it. It is a vanilla
+component either way, and needs no resource pack the way the [textures](#textures) do, so the name
+reaches a vanilla client with nothing installed.
+
+**A legendary crafted before this has no name.** An item's components are fixed when it is made and
+the name is written by the recipe, so it rides on the ones made from here on. The pedestal hands back
+the same item it was given, so a trip through the case does not add one either — nothing rewrites an
+item that already exists.
+
 ## Admin
 
 ```
