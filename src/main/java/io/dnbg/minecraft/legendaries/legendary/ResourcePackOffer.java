@@ -29,8 +29,8 @@ import net.minecraft.server.MinecraftServer.ServerResourcePackInfo;
  * what it gets back. Answering that one question is the whole of the integration — {@link
  * io.dnbg.minecraft.legendaries.mixin.DedicatedServerMixin} is what routes it here.
  *
- * <p>A dedicated server only. Vanilla implements that method on the dedicated server alone, and
- * offering from an integrated one hangs the single-player join outright — see that mixin.
+ * <p>A dedicated server only. Vanilla answers that method non-empty on the dedicated server alone,
+ * and answering it on an integrated one hangs the single-player join — see that mixin.
  */
 public final class ResourcePackOffer {
 	/**
