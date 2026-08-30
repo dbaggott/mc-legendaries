@@ -143,10 +143,12 @@ public final class LegendaryRules {
 	}
 
 	/**
-	 * Whether the player is carrying this legendary, in hand or in inventory.
+	 * Whether the player has this legendary: in hand, in their inventory, or wherever the screen
+	 * they have open is holding it — see {@link #heldInScreen}, which is where most of the answer
+	 * lives and why an anvil's input slot and the menu cursor both count.
 	 *
-	 * <p>Only the player's own slots count. One nested inside a shulker box in the inventory does
-	 * not — though nothing can put it there, since the container rules refuse it.
+	 * <p>One nested inside a shulker box does not, though nothing can put it there, since the
+	 * container rules refuse it.
 	 */
 	public static boolean carrying(Player player, Legendary legendary) {
 		for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {

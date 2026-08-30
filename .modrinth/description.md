@@ -89,6 +89,11 @@ How many hearts is a setting.
 **Ordinary pickaxes are untouched** — this has a recipe of its own rather than replacing theirs, so
 it is the one legendary sharing its item with something you can still make normally.
 
+**It looks the part.** A gem of molten amber set into the netherite, so the one legendary that
+shares its item with an ordinary tool does not share its appearance. That arrives as a small
+resource pack the server offers you when you join — optional, and declining it costs nothing but
+the look: the pack retextures only this pickaxe, and every ordinary one is untouched either way.
+
 |   |   |   |
 |---|---|---|
 | Netherite ingot | Deepslate emerald ore | Netherite ingot |
