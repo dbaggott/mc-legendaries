@@ -277,6 +277,11 @@ The pack's `when` string and the `minecraft:custom_model_data` on the recipe res
 of one match, in `src/main/resourcepack/assets/minecraft/items/netherite_pickaxe.json` and
 `src/main/resources/data/legendaries/recipe/legendary_pickaxe.json`. They are changed together.
 
+**Two textures are drawn ahead of their items.** `legendary_axe` and `legendary_sword` are in the
+pack, and nothing selects them — no legendary is a netherite axe or sword. They are here so the art
+is versioned alongside the rest rather than living in someone's downloads. Giving one an item means
+an item definition beside the pickaxe's and a `custom_model_data` marker on whatever produces it.
+
 **Single-player too.** The integrated server answers the same question the dedicated one does, so
 your own world offers you the pack the same way. To apply it by hand instead, the zip is on the
 release next to the jar and goes in `.minecraft/resourcepacks`.
