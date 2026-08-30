@@ -276,6 +276,11 @@ of one match, in `src/main/resourcepack/assets/minecraft/items/netherite_pickaxe
 your own world offers you the pack the same way. To apply it by hand instead, the zip is on the
 release next to the jar and goes in `.minecraft/resourcepacks`.
 
+**A pickaxe crafted before this keeps the old look.** An item's components are fixed when it is
+made, and the marker is written by the recipe — so it rides on pickaxes crafted from here on, and a
+world whose pickaxe already exists goes on seeing a netherite one. Nothing rewrites an item a player
+is already holding.
+
 ## Target toolchain
 
 | Tooling | Version |
