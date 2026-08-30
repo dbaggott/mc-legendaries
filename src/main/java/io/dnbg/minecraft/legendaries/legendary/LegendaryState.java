@@ -17,8 +17,8 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
 /**
- * The per-world facts about every legendary: which have been crafted, which are on the pedestal, and
- * where the pedestal is.
+ * The per-world facts about every legendary: which have been crafted, which have been announced,
+ * which are on the pedestal, and where the pedestal is.
  *
  * <p>Stored on the OVERWORLD only, and read from there no matter which dimension asks. A
  * {@code SavedDataStorage} is per-level, so keeping this per-dimension would give the Nether its own
@@ -53,6 +53,8 @@ public class LegendaryState extends SavedData {
 			BlockPos.CODEC.optionalFieldOf("pedestal").forGetter(state -> Optional.ofNullable(state.pedestalPos)),
 			LEGENDARY_SET.fieldOf("on_pedestal").orElseGet(() -> EnumSet.noneOf(Legendary.class))
 					.forGetter(state -> state.onPedestal),
+			LEGENDARY_SET.fieldOf("announced").orElseGet(() -> EnumSet.noneOf(Legendary.class))
+					.forGetter(state -> state.announced),
 			Codec.unboundedMap(Codec.STRING, Codec.INT).fieldOf("settings").orElseGet(Map::of)
 					.forGetter(state -> state.settings))
 			.apply(instance, LegendaryState::new));
@@ -63,15 +65,17 @@ public class LegendaryState extends SavedData {
 	private final Map<String, Integer> settings = new HashMap<>();
 	private final Set<Legendary> crafted = EnumSet.noneOf(Legendary.class);
 	private final Set<Legendary> onPedestal = EnumSet.noneOf(Legendary.class);
+	private final Set<Legendary> announced = EnumSet.noneOf(Legendary.class);
 	private BlockPos pedestalPos;
 
 	public LegendaryState() {
 	}
 
 	private LegendaryState(Set<Legendary> crafted, Optional<BlockPos> pedestalPos, Set<Legendary> onPedestal,
-			Map<String, Integer> settings) {
+			Set<Legendary> announced, Map<String, Integer> settings) {
 		this.crafted.addAll(crafted);
 		this.onPedestal.addAll(onPedestal);
+		this.announced.addAll(announced);
 		this.pedestalPos = pedestalPos.orElse(null);
 		this.settings.putAll(settings);
 	}
@@ -117,6 +121,25 @@ public class LegendaryState extends SavedData {
 		if (crafted.add(legendary)) {
 			setDirty();
 		}
+	}
+
+	/**
+	 * Whether the world has already been told about this one.
+	 *
+	 * <p>Separate from {@link #crafted}, which the Dragon Egg never enters — it is not crafted at
+	 * all, so a craft cannot be what says it has been seen.
+	 */
+	public boolean announced(Legendary legendary) {
+		return announced.contains(legendary);
+	}
+
+	/** Marks it announced, and says whether this call is the one that did it. */
+	public boolean markAnnounced(Legendary legendary) {
+		if (!announced.add(legendary)) {
+			return false;
+		}
+		setDirty();
+		return true;
 	}
 
 	/** Set when the pedestal is raised, on a world's first tick; null only before that. */

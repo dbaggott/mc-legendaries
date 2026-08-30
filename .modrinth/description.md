@@ -1,17 +1,16 @@
 # Legendaries
 
 Adds **legendary** items to Minecraft: unique, one-per-world artifacts with their own rules, each
-defined by a single data file, and no other way to obtain them. Six exist so far — the **Netherite
-Spear**, the **Mace**, the **Dragon Egg**, the **Legendary Pickaxe**, the **Legendary Sword** and the
-**Legendary Axe**. Every one is one per world,
-refused by every container, never set down as a block, and returned to a shared pedestal rather than
-ever being lost.
+defined by a single data file, and no other way to obtain them. Six exist so far — the **Legendary
+Spear**, the **Legendary Mace**, the **Dragon Egg**, the **Legendary Pickaxe**, the **Legendary
+Sword** and the **Legendary Axe**. Every one is one per world, refused by every container, never set
+down as a block, and returned to a shared pedestal rather than ever being lost.
 
 Install it on whichever side runs the world — your own game for single-player, or the server.
 **Other players need nothing.** The mod registers no custom item, block or data component, so a
 vanilla client can join a server running it and see only vanilla things.
 
-## The Mace
+## The Legendary Mace
 
 Crafted by the ordinary vanilla recipe — a heavy core over a breeze rod. The ingredients and pattern
 are untouched; only the result is the legendary, so there is one mace per world and no plain ones.
@@ -29,7 +28,7 @@ Nothing drops. Sixty second cooldown.
 
 It is centred on you and does not care that you are standing there. Expect to fall.
 
-## The Netherite Spear
+## The Legendary Spear
 
 One per world, and the only spear obtainable at all.
 
@@ -147,6 +146,19 @@ ordinary tool you can be holding at the same time, and the name is what tells th
 The name is an ordinary vanilla component, so it reaches every client with nothing installed — no
 resource pack needed, unlike the textures. A legendary crafted before this update has no name; an
 item's components are fixed when it is made.
+
+## Arrivals
+
+The first time a legendary is in anybody's hands, everyone hears about it:
+
+```
+The Legendary Pickaxe has been crafted by Steve
+The Dragon Egg has been obtained by Alex
+```
+
+Once per world, not once per player — the line marks the legendary arriving, so handing it over,
+dying with it and taking it back off the pedestal are all silent. Each of the six is announced
+exactly once, ever.
 
 ## Admin
 

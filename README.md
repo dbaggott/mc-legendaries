@@ -7,7 +7,7 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own rules, each defined by a single data file, and no other
 way to obtain them.
 
-Six exist so far: the **Netherite Spear**, the **Mace**, the **Dragon Egg**, the
+Six exist so far: the **Legendary Spear**, the **Legendary Mace**, the **Dragon Egg**, the
 **Legendary Pickaxe**, the **Legendary Sword** and the **Legendary Axe**.
 
 Every legendary shares the same rules — one per world, refused by every container, never set down
@@ -18,7 +18,7 @@ The mod is **common**, not client-only — every rule it adds is decided on the
 logical server, so it installs on a dedicated server and vanilla clients can
 connect.
 
-## The Netherite Spear
+## The Legendary Spear
 
 One per world, and the only spear obtainable at all.
 
@@ -70,7 +70,7 @@ vanilla spear AI is untouched. Mobs are refused the legendary spear, and if one
 gets hold of it regardless it returns to the pedestal when that mob dies or
 despawns rather than leaving with it.
 
-## The Mace
+## The Legendary Mace
 
 Crafted by the ordinary vanilla recipe — a heavy core over a breeze rod. The recipe's ingredients
 and pattern are untouched; only its result is the legendary, so there is one mace per world and no
@@ -237,6 +237,34 @@ reaches a vanilla client with nothing installed.
 the name is written by the recipe, so it rides on the ones made from here on. The pedestal hands back
 the same item it was given, so a trip through the case does not add one either — nothing rewrites an
 item that already exists.
+
+The mod's own messages name a legendary the same way, with "The" in front of it — so what an
+`already been crafted` refusal calls it and what is written on the item agree.
+
+## Arrivals
+
+The first time a legendary is in anybody's hands, the server says so to everyone:
+
+```
+The Legendary Pickaxe has been crafted by Steve
+The Dragon Egg has been obtained by Alex
+```
+
+**Once per world, not once per player.** The line marks the legendary arriving, not somebody
+acquiring it — so handing it over, dying with it, and claiming it back off the pedestal are all
+silent. A world hears about each of the six exactly once, ever.
+
+**Crafted or obtained** is read from whether the world has a craft on record. The Dragon Egg is never
+crafted, so it is obtained; and a legendary an operator hands out with `item give` was not crafted
+either, so the line does not claim it was.
+
+It is noticed on the same once-a-second pass that puts back what a legendary grants, rather than
+hooked to the craft itself: taking one out of a crafting result and picking the egg up off the ground
+are two different acts, and what is being announced is neither of them — it is the legendary being in
+play. The line lands within a second rather than on the tick.
+
+**A legendary a world already had is announced the first time somebody picks it up** after this
+version, since nothing recorded the arrival at the time.
 
 ## Admin
 

@@ -38,7 +38,7 @@ import net.minecraft.world.level.block.Blocks;
  */
 public enum Legendary implements Tunable {
 	/** Replaces every vanilla spear recipe; see {@code data/legendaries/recipe/netherite_spear.json}. */
-	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Netherite Spear",
+	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Legendary Spear",
 			"legendary_spear", new LegendarySource.FromRecipe("legendaries:netherite_spear"),
 			MobEffects.SPEED, 1, null),
 
@@ -46,7 +46,7 @@ public enum Legendary implements Tunable {
 	 * Crafted by the vanilla recipe, which is overridden in place to mark its result — the
 	 * ingredients and pattern are untouched, so it is still "the mace recipe" to a player.
 	 */
-	MACE("legendaries_mace", Items.MACE, "The Mace", "legendary_mace",
+	MACE("legendaries_mace", Items.MACE, "The Legendary Mace", "legendary_mace",
 			new LegendarySource.FromRecipe("minecraft:mace"), null, 0, Ability.MOLTEN_BLAST),
 
 	/**
@@ -198,7 +198,12 @@ public enum Legendary implements Tunable {
 		return marker;
 	}
 
-	/** How this legendary is named in the messages it shows a player. */
+	/**
+	 * How this legendary is named in the messages it shows a player.
+	 *
+	 * <p>"The" and then the name the item itself carries, so a player reads the same name in a
+	 * message and on the item in their hand.
+	 */
 	@Override
 	public String displayName() {
 		return displayName;
