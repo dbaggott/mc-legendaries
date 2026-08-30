@@ -243,20 +243,29 @@ The mod's own messages name a legendary the same way, with "The" in front of it 
 
 ## Arrivals
 
-The first time a legendary is in anybody's hands, the server says so to everyone:
+The first time a legendary is in anybody's hands, the server announces it to everyone across the
+middle of the screen — the legendary's name large, in the same orange-to-gold the name on the item
+is written in, and who has it on the line beneath:
 
 ```
-The Legendary Pickaxe has been crafted by Steve
-The Dragon Egg has been obtained by Alex
+                     The Legendary Pickaxe
+                    has been crafted by Steve
+
+                        The Dragon Egg
+                    has been obtained by Alex
 ```
+
+**Across the screen, not in chat.** A world hears this once and never again, so it goes somewhere
+nobody has to have been watching chat to catch. It fades on its own after about five seconds.
 
 **Once per world, not once per player.** The line marks the legendary arriving, not somebody
 acquiring it — so handing it over, dying with it, and claiming it back off the pedestal are all
 silent. A world hears about each of the six exactly once, ever.
 
-**Crafted or obtained** is read from whether the world has a craft on record. The Dragon Egg is never
-crafted, so it is obtained; and a legendary an operator hands out with `item give` was not crafted
-either, so the line does not claim it was.
+**Crafted or obtained** is the legendary's own word, taken from how it comes into the world. The
+Dragon Egg is dug out of a block, so it is obtained; the five with recipes are crafted things, and
+one an operator hands out with `item give` is announced as crafted too. The line describes the
+legendary, not the route the copy in front of you took to get there.
 
 **A craft announces itself**, at the moment the result leaves the slot, because that is the one place
 that knows which player made it. Everything else — the egg dug out of its block, a copy an operator

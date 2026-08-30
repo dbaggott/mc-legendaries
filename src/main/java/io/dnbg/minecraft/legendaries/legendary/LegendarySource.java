@@ -42,6 +42,15 @@ public sealed interface LegendarySource {
 	ItemStack create(MinecraftServer server);
 
 	/**
+	 * How a legendary that comes from here is said to have arrived.
+	 *
+	 * <p>A property of the source rather than of what a world recorded, so the line describes the
+	 * legendary rather than the route one copy of it took: a legendary an operator hands out with
+	 * {@code item give} is still a crafted thing.
+	 */
+	String arrivalVerb();
+
+	/**
 	 * A legendary that is crafted, defined by the result of its own recipe.
 	 *
 	 * <p>{@code assemble} ignores its input for a fixed result, so an empty crafting grid is enough
@@ -65,6 +74,11 @@ public sealed interface LegendarySource {
 					.filter(CraftingRecipe.class::isInstance)
 					.map(recipe -> ((CraftingRecipe) recipe).assemble(CraftingInput.EMPTY))
 					.orElse(ItemStack.EMPTY);
+		}
+
+		@Override
+		public String arrivalVerb() {
+			return "crafted";
 		}
 	}
 
@@ -94,6 +108,11 @@ public sealed interface LegendarySource {
 					.create(LootContextParamSets.BLOCK);
 			List<ItemStack> dropped = server.reloadableRegistries().getLootTable(table).getRandomItems(params);
 			return dropped.isEmpty() ? ItemStack.EMPTY : dropped.getFirst();
+		}
+
+		@Override
+		public String arrivalVerb() {
+			return "obtained";
 		}
 	}
 }

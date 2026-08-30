@@ -193,6 +193,11 @@ public enum Legendary implements Tunable {
 		return source.create(server);
 	}
 
+	/** How this one is said to have arrived; see {@link LegendarySource#arrivalVerb()}. */
+	public String arrivalVerb() {
+		return source.arrivalVerb();
+	}
+
 	/** Key inside {@code minecraft:custom_data}. Must match what this legendary's source produces. */
 	public String marker() {
 		return marker;
