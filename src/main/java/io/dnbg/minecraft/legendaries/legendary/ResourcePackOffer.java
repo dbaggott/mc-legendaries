@@ -27,8 +27,10 @@ import net.minecraft.server.MinecraftServer.ServerResourcePackInfo;
  * <p>Vanilla asks {@link MinecraftServer#getServerResourcePack()} once per connection, during the
  * configuration phase, and builds both the push packet and the wait for the client's answer out of
  * what it gets back. Answering that one question is the whole of the integration — {@link
- * io.dnbg.minecraft.legendaries.mixin.MinecraftServerMixin} and {@link
- * io.dnbg.minecraft.legendaries.mixin.DedicatedServerMixin} are what route it here.
+ * io.dnbg.minecraft.legendaries.mixin.DedicatedServerMixin} is what routes it here.
+ *
+ * <p>A dedicated server only. Vanilla implements that method on the dedicated server alone, and
+ * offering from an integrated one hangs the single-player join outright — see that mixin.
  */
 public final class ResourcePackOffer {
 	/**

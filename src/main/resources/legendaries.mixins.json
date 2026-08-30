@@ -18,7 +18,6 @@
     "InteractionAccessor",
     "ItemDisplayAccessor",
     "ItemEntityMixin",
-    "MinecraftServerMixin",
     "MobMixin",
     "RepairItemRecipeMixin",
     "ResultSlotAccessor",

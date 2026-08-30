@@ -318,9 +318,15 @@ The same pairing repeats for the Legendary Sword and the Legendary Axe: one item
 one marker each, one texture each. Every ordinary netherite sword, axe and pickaxe falls through to
 the vanilla model it always had.
 
-**Single-player too.** The integrated server answers the same question the dedicated one does, so
-your own world offers you the pack the same way. To apply it by hand instead, the zip is on the
-release next to the jar and goes in `.minecraft/resourcepacks`.
+**Single-player installs it by hand.** The zip is on the release next to the jar and goes in
+`.minecraft/resourcepacks`, where it stays enabled across sessions.
+
+Only a dedicated server offers the pack, and that is deliberate. Vanilla implements
+`getServerResourcePack` on the dedicated server alone; making an integrated server answer it too
+puts the client's resource reload inside its own join handshake, and the join does not finish — the
+world sits on "Loading Terrain" with nothing crashed. A hand-installed pack has none of that
+problem, and unlike the offer it does not ask again every time you open the world: single-player has
+no server-list entry, which is where a "yes, always" answer would have to live.
 
 **A pickaxe crafted before this keeps the old look.** An item's components are fixed when it is
 made, and the marker is written by the recipe — so it rides on pickaxes crafted from here on, and a
