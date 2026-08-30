@@ -52,8 +52,8 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
-// What a client renders the Legendary Pickaxe from. Uploaded to the release by
-// the github block below, and offered to joining players by ResourcePackOffer,
+// What a client renders the legendaries' own looks from. Uploaded to the release
+// by the github block below, and offered to joining players by ResourcePackOffer,
 // which is where what it is for is written down.
 def resourcePack = tasks.register("resourcePack", Zip) {
 	from "src/main/resourcepack"
