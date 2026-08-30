@@ -7,7 +7,7 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own rules, each defined by a single data file, and no other
 way to obtain them.
 
-Six exist so far: the **Netherite Spear**, the **Mace**, the **Dragon Egg**, the
+Six exist so far: the **Legendary Spear**, the **Legendary Mace**, the **Dragon Egg**, the
 **Legendary Pickaxe**, the **Legendary Sword** and the **Legendary Axe**.
 
 Every legendary shares the same rules — one per world, refused by every container, never set down
@@ -18,7 +18,7 @@ The mod is **common**, not client-only — every rule it adds is decided on the
 logical server, so it installs on a dedicated server and vanilla clients can
 connect.
 
-## The Netherite Spear
+## The Legendary Spear
 
 One per world, and the only spear obtainable at all.
 
@@ -70,7 +70,7 @@ vanilla spear AI is untouched. Mobs are refused the legendary spear, and if one
 gets hold of it regardless it returns to the pedestal when that mob dies or
 despawns rather than leaving with it.
 
-## The Mace
+## The Legendary Mace
 
 Crafted by the ordinary vanilla recipe — a heavy core over a breeze rod. The recipe's ingredients
 and pattern are untouched; only its result is the legendary, so there is one mace per world and no
@@ -215,6 +215,57 @@ is for.
 **They keep the rules the others do** — refused by every container, never left on display, returned
 to the pedestal rather than lost, and one per world each.
 
+## Names
+
+Every legendary but the Dragon Egg carries a name of its own — **Legendary Spear**, **Legendary
+Mace**, **Legendary Pickaxe**, **Legendary Sword** and **Legendary Axe** — written as a gradient of
+the amber the tool textures set into the netherite, deep at the first letter and bright at the last.
+The ramp is fitted to the name rather than to a fixed number of steps, so every one of them runs the
+whole way from end to end whatever its length.
+
+The egg is the one that needs none. Every other legendary shares its item with an ordinary tool a
+player can be holding at the same time, and the name is what tells the two apart — where a dragon egg
+is the only one there has ever been.
+
+The name is `minecraft:item_name` rather than `minecraft:custom_name` — the item's own name rather
+than a rename. Vanilla italicises a renamed item and leaves a named one upright, so this is the
+component that reads as what the item *is* rather than as what somebody called it. It is a vanilla
+component either way, and needs no resource pack the way the [textures](#textures) do, so the name
+reaches a vanilla client with nothing installed.
+
+**A legendary crafted before this has no name.** An item's components are fixed when it is made and
+the name is written by the recipe, so it rides on the ones made from here on. The pedestal hands back
+the same item it was given, so a trip through the case does not add one either — nothing rewrites an
+item that already exists.
+
+The mod's own messages name a legendary the same way, with "The" in front of it — so what an
+`already been crafted` refusal calls it and what is written on the item agree.
+
+## Arrivals
+
+The first time a legendary is in anybody's hands, the server says so to everyone:
+
+```
+The Legendary Pickaxe has been crafted by Steve
+The Dragon Egg has been obtained by Alex
+```
+
+**Once per world, not once per player.** The line marks the legendary arriving, not somebody
+acquiring it — so handing it over, dying with it, and claiming it back off the pedestal are all
+silent. A world hears about each of the six exactly once, ever.
+
+**Crafted or obtained** is read from whether the world has a craft on record. The Dragon Egg is never
+crafted, so it is obtained; and a legendary an operator hands out with `item give` was not crafted
+either, so the line does not claim it was.
+
+**A craft announces itself**, at the moment the result leaves the slot, because that is the one place
+that knows which player made it. Everything else — the egg dug out of its block, a copy an operator
+hands out — is noticed on the once-a-second pass that already asks who is carrying what, and credits
+whoever has it. That line lands within a second rather than on the tick.
+
+**A legendary a world already had is announced the first time somebody picks it up** after this
+version, since nothing recorded the arrival at the time.
+
 ## Admin
 
 ```
@@ -236,7 +287,11 @@ to the pedestal rather than lost, and one per world each.
 ```
 
 `<subject>` is `molten_blast` or `dragon_egg`, tab-completed; so is `<setting>`, and it offers only
-the knobs that subject actually has.
+the knobs that subject actually has. A legendary answers to the name the item itself carries —
+`legendary_pickaxe`, `legendary_spear`, and `dragon_egg` for the one that keeps vanilla's name. So
+does `item give`. These changed in 0.9.0: what was `netherite_spear`, `mace`, `pickaxe`, `sword` and
+`axe` is now `legendary_` and each of those, and only `dragon_egg` is what it was. A command block
+still running an old name fails with "unknown legendary".
 
 A knob names whatever it belongs to, which is not always the item in your hand. The blast's four
 belong to the **ability** rather than to the mace carrying it, because two carriers of one ability

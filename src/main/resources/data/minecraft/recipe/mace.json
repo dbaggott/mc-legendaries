@@ -15,6 +15,25 @@
       "minecraft:custom_data": {
         "legendaries_mace": true
       },
+      "minecraft:item_name": {
+        "text": "",
+        "extra": [
+          { "text": "L", "color": "#E96C0C" },
+          { "text": "e", "color": "#EA7311" },
+          { "text": "g", "color": "#EB7B16" },
+          { "text": "e", "color": "#EC821B" },
+          { "text": "n", "color": "#EE8921" },
+          { "text": "d", "color": "#EF9126" },
+          { "text": "a", "color": "#F0982B" },
+          { "text": "r", "color": "#F19F30" },
+          { "text": "y", "color": "#F2A635" },
+          { "text": " ", "color": "#F3AE3A" },
+          { "text": "M", "color": "#F5B540" },
+          { "text": "a", "color": "#F6BC45" },
+          { "text": "c", "color": "#F7C44A" },
+          { "text": "e", "color": "#F8CB4F" }
+        ]
+      },
       "minecraft:unbreakable": {}
     }
   }

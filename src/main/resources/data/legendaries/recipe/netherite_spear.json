@@ -19,6 +19,26 @@
       "minecraft:custom_data": {
         "legendaries_spear": true
       },
+      "minecraft:item_name": {
+        "text": "",
+        "extra": [
+          { "text": "L", "color": "#E96C0C" },
+          { "text": "e", "color": "#EA7311" },
+          { "text": "g", "color": "#EB7A16" },
+          { "text": "e", "color": "#EC801A" },
+          { "text": "n", "color": "#ED871F" },
+          { "text": "d", "color": "#EE8E24" },
+          { "text": "a", "color": "#EF9529" },
+          { "text": "r", "color": "#F09C2E" },
+          { "text": "y", "color": "#F2A232" },
+          { "text": " ", "color": "#F3A937" },
+          { "text": "S", "color": "#F4B03C" },
+          { "text": "p", "color": "#F5B741" },
+          { "text": "e", "color": "#F6BD45" },
+          { "text": "a", "color": "#F7C44A" },
+          { "text": "r", "color": "#F8CB4F" }
+        ]
+      },
       "minecraft:unbreakable": {},
       "minecraft:enchantments": {
         "minecraft:lunge": 3,

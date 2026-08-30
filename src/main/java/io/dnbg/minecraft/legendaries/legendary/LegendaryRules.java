@@ -38,13 +38,14 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class LegendaryRules {
 	/**
-	 * How often what a legendary grants by being carried is put back where it belongs.
+	 * How often the sweeps that read who is carrying what run.
 	 *
-	 * <p>Shorter than an effect's own duration, so the effect never visibly flickers — and short
-	 * enough that neither an effect nor a heart outlives a legendary leaving the inventory by more
-	 * than one pass.
+	 * <p>Set by the bonuses, which are the demanding half: shorter than an effect's own duration, so
+	 * the effect never visibly flickers, and short enough that neither an effect nor a heart outlives
+	 * a legendary leaving the inventory by more than one pass. An arrival has nothing to say about
+	 * the rate and rides on it.
 	 */
-	private static final int BONUS_INTERVAL_TICKS = 20;
+	private static final int CARRY_SWEEP_TICKS = 20;
 	private static final int EFFECT_DURATION_TICKS = 40;
 
 	/** Reset per session; the pedestal is raised once the site's chunk is genuinely loaded. */
@@ -60,6 +61,7 @@ public final class LegendaryRules {
 		spinPedestal();
 		settleCraters();
 		grantCarriedBonuses();
+		announceArrivals();
 		wireAbilities();
 		showAbilityWaits();
 		wireEntityInteractions();
@@ -122,10 +124,42 @@ public final class LegendaryRules {
 		ServerTickEvents.END_SERVER_TICK.register(MoltenBlast::settle);
 	}
 
+	/**
+	 * Tells the world about a legendary that arrived without a craft.
+	 *
+	 * <p>The Dragon Egg is the one that always does — it is dug out of a block rather than made — and
+	 * an operator's {@code item give} is the other way one reaches a player with nothing to announce
+	 * it. A craft announces itself, from the one place that knows which player made it; see {@link
+	 * io.dnbg.minecraft.legendaries.mixin.ResultSlotMixin}.
+	 *
+	 * <p>Read off the same "is this player carrying it" question the bonuses run on, so every route
+	 * to holding one is covered without naming any of them. The cost is that the line arrives on the
+	 * next pass rather than on the tick, which is under a second and is not a rule anybody can act
+	 * on.
+	 */
+	private static void announceArrivals() {
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			if (server.getTickCount() % CARRY_SWEEP_TICKS != 0) {
+				return;
+			}
+			LegendaryState state = LegendaryState.get(server);
+			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+				for (Legendary legendary : Legendary.values()) {
+					// Cheap half first: once a world has heard about all six, this sweep stops
+					// walking inventories entirely.
+					if (state.announced(legendary) || !carrying(player, legendary)) {
+						continue;
+					}
+					Arrival.announce(server, legendary, player);
+				}
+			}
+		});
+	}
+
 	/** Everything a legendary grants merely by being carried, put back on one cadence. */
 	private static void grantCarriedBonuses() {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (server.getTickCount() % BONUS_INTERVAL_TICKS != 0) {
+			if (server.getTickCount() % CARRY_SWEEP_TICKS != 0) {
 				return;
 			}
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {

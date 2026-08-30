@@ -2,7 +2,6 @@ package io.dnbg.minecraft.legendaries.legendary;
 
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.Holder;
@@ -39,15 +38,15 @@ import net.minecraft.world.level.block.Blocks;
  */
 public enum Legendary implements Tunable {
 	/** Replaces every vanilla spear recipe; see {@code data/legendaries/recipe/netherite_spear.json}. */
-	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Netherite Spear",
-			new LegendarySource.FromRecipe("legendaries:netherite_spear"),
+	NETHERITE_SPEAR("legendaries_spear", Items.NETHERITE_SPEAR, "The Legendary Spear",
+			"legendary_spear", new LegendarySource.FromRecipe("legendaries:netherite_spear"),
 			MobEffects.SPEED, 1, null),
 
 	/**
 	 * Crafted by the vanilla recipe, which is overridden in place to mark its result — the
 	 * ingredients and pattern are untouched, so it is still "the mace recipe" to a player.
 	 */
-	MACE("legendaries_mace", Items.MACE, "The Mace",
+	MACE("legendaries_mace", Items.MACE, "The Legendary Mace", "legendary_mace",
 			new LegendarySource.FromRecipe("minecraft:mace"), null, 0, Ability.MOLTEN_BLAST),
 
 	/**
@@ -61,7 +60,7 @@ public enum Legendary implements Tunable {
 	 * <p>It grants hearts rather than an effect, which is what declaring {@link
 	 * LegendarySetting#HEARTS} means here — see {@link CarriedHearts}.
 	 */
-	DRAGON_EGG("legendaries_dragon_egg", Items.DRAGON_EGG, "The Dragon Egg",
+	DRAGON_EGG("legendaries_dragon_egg", Items.DRAGON_EGG, "The Dragon Egg", "dragon_egg",
 			new LegendarySource.FromBlockDrop(Blocks.DRAGON_EGG), null, 0, null,
 			LegendarySetting.HEARTS),
 
@@ -77,7 +76,7 @@ public enum Legendary implements Tunable {
 	 * on the source as a {@link CraftRequirement}.
 	 */
 	PICKAXE("legendaries_pickaxe", Items.NETHERITE_PICKAXE, "The Legendary Pickaxe",
-			new LegendarySource.FromRecipe("legendaries:legendary_pickaxe",
+			"legendary_pickaxe", new LegendarySource.FromRecipe("legendaries:legendary_pickaxe",
 					new CraftRequirement.EveryBookHas(Enchantments.EFFICIENCY, 5,
 							"Both books must be Efficiency V.")),
 			MobEffects.FIRE_RESISTANCE, 0, null),
@@ -93,7 +92,7 @@ public enum Legendary implements Tunable {
 	 * source as a {@link CraftRequirement} — the same shape as the pickaxe's books.
 	 */
 	SWORD("legendaries_sword", Items.NETHERITE_SWORD, "The Legendary Sword",
-			new LegendarySource.FromRecipe("legendaries:legendary_sword",
+			"legendary_sword", new LegendarySource.FromRecipe("legendaries:legendary_sword",
 					new CraftRequirement.EveryBookHas(Enchantments.SHARPNESS, 5,
 							"The book must be Sharpness V.")),
 			MobEffects.SPEED, 0, null),
@@ -108,7 +107,7 @@ public enum Legendary implements Tunable {
 	 * thing a pickaxe is for.
 	 */
 	AXE("legendaries_axe", Items.NETHERITE_AXE, "The Legendary Axe",
-			new LegendarySource.FromRecipe("legendaries:legendary_axe",
+			"legendary_axe", new LegendarySource.FromRecipe("legendaries:legendary_axe",
 					new CraftRequirement.EveryBookHas(Enchantments.SHARPNESS, 5,
 							"The book must be Sharpness V.")),
 			MobEffects.STRENGTH, 0, null);
@@ -116,18 +115,20 @@ public enum Legendary implements Tunable {
 	private final String marker;
 	private final Item item;
 	private final String displayName;
+	private final String commandName;
 	private final LegendarySource source;
 	private final Holder<MobEffect> carriedEffect;
 	private final int carriedAmplifier;
 	private final Ability ability;
 	private final Set<LegendarySetting> settings;
 
-	Legendary(String marker, Item item, String displayName, LegendarySource source,
-			Holder<MobEffect> carriedEffect, int carriedAmplifier, Ability ability,
-			LegendarySetting... settings) {
+	Legendary(String marker, Item item, String displayName, String commandName,
+			LegendarySource source, Holder<MobEffect> carriedEffect, int carriedAmplifier,
+			Ability ability, LegendarySetting... settings) {
 		this.marker = marker;
 		this.item = item;
 		this.displayName = displayName;
+		this.commandName = commandName;
 		this.source = source;
 		this.carriedEffect = carriedEffect;
 		this.carriedAmplifier = carriedAmplifier;
@@ -161,10 +162,18 @@ public enum Legendary implements Tunable {
 		return Optional.ofNullable(ability);
 	}
 
-	/** The lowercase name this legendary answers to on the command line. */
+	/**
+	 * The name this legendary answers to on the command line: the name the item itself carries, in
+	 * lower case.
+	 *
+	 * <p>Stated per entry rather than derived from {@link #name()}, which is the key a world's saved
+	 * settings and the pedestal's slot tags are written under and so cannot follow what a legendary
+	 * is called. The two are free to differ: the spear's entry is {@code NETHERITE_SPEAR} and the
+	 * item is the Legendary Spear.
+	 */
 	@Override
 	public String commandName() {
-		return name().toLowerCase(Locale.ROOT);
+		return commandName;
 	}
 
 	/**
@@ -189,7 +198,12 @@ public enum Legendary implements Tunable {
 		return marker;
 	}
 
-	/** How this legendary is named in the messages it shows a player. */
+	/**
+	 * How this legendary is named in the messages it shows a player.
+	 *
+	 * <p>"The" and then the name the item itself carries, so a player reads the same name in a
+	 * message and on the item in their hand.
+	 */
 	@Override
 	public String displayName() {
 		return displayName;

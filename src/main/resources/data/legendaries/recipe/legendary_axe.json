@@ -20,6 +20,24 @@
       "minecraft:custom_data": {
         "legendaries_axe": true
       },
+      "minecraft:item_name": {
+        "text": "",
+        "extra": [
+          { "text": "L", "color": "#E96C0C" },
+          { "text": "e", "color": "#EA7412" },
+          { "text": "g", "color": "#EC7C17" },
+          { "text": "e", "color": "#ED841D" },
+          { "text": "n", "color": "#EE8C22" },
+          { "text": "d", "color": "#EF9428" },
+          { "text": "a", "color": "#F09C2E" },
+          { "text": "r", "color": "#F2A333" },
+          { "text": "y", "color": "#F3AB39" },
+          { "text": " ", "color": "#F4B33E" },
+          { "text": "A", "color": "#F6BB44" },
+          { "text": "x", "color": "#F7C349" },
+          { "text": "e", "color": "#F8CB4F" }
+        ]
+      },
       "minecraft:custom_model_data": {
         "strings": [
           "legendaries:axe"
