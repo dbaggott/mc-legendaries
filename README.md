@@ -170,6 +170,13 @@ up as gravel — this is not the tool to dig flint with.
 and returned to the pedestal rather than lost. It is crafted, so it is one per world — the recipe
 still previews after that, and refuses.
 
+**How it looks.** Emerald set into netherite, so the one pickaxe that shares its item with an
+ordinary one does not share its appearance. The mod offers a small resource pack when you join and
+the item carries a `minecraft:custom_model_data` string; the pack's item definition selects on that
+string and names the vanilla model as its fallback, so the texture only ever replaces *this*
+pickaxe. Decline the pack, or play without it, and you see a netherite pickaxe — nothing else
+changes, and nothing renders wrong. See [Textures](#textures).
+
 ## Admin
 
 ```
@@ -240,12 +247,42 @@ Other players need nothing. The mod registers no custom item, block or data
 component, so a vanilla client sees only vanilla things and can connect to a
 server running it.
 
+## Textures
+
+The Legendary Pickaxe has a texture of its own. It ships as a resource pack rather than as assets
+inside the jar, because the jar's assets would only reach players who installed the mod — and no
+other player has to.
+
+**How it reaches a player.** The mod answers vanilla's own "does this server serve a resource pack?"
+question with the pack published alongside the jar, and the server offers it during the configuration
+phase, before the player is in the world. It is never sent as *required*: a player can decline, or
+turn server packs off in their options, and simply sees the vanilla pickaxe. Because it is the
+vanilla mechanism, an unmodded client handles it like any other server pack.
+
+**Turning it off.** Set `resource-pack` in `server.properties` to a pack of your own and that answer
+stands — the mod only fills the silence, it does not overrule a server that has already chosen.
+
+**Why nothing breaks without it.** The pack does not introduce a new item model; it overrides the
+vanilla netherite pickaxe's item definition with a `minecraft:select` on
+`minecraft:custom_model_data`, and every other netherite pickaxe falls through to the same vanilla
+model it always had. A client that never applies the pack has no override to consult at all, which is
+why declining costs nothing and why the component is safe to put on the item for everyone.
+
+The pack's `when` string and the `minecraft:custom_model_data` on the recipe result are the two ends
+of one match, in `src/main/resourcepack/assets/minecraft/items/netherite_pickaxe.json` and
+`src/main/resources/data/legendaries/recipe/legendary_pickaxe.json`. They are changed together.
+
+**Single-player too.** The integrated server answers the same question the dedicated one does, so
+your own world offers you the pack the same way. To apply it by hand instead, the zip is on the
+release next to the jar and goes in `.minecraft/resourcepacks`.
+
 ## Target toolchain
 
 | Tooling | Version |
 |---|---|
 | Minecraft (runtime) | 26.1 through the whole 26.3 line — one jar for all |
 | Minecraft (build target) | 26.2 by default; CI rebuilds the same source against 26.1, 26.1.2, and a 26.3 snapshot |
+| Resource pack format | 84 through 94 — 26.1's through the 26.3 snapshot's |
 | Fabric Loader | 0.19.3 |
 | Fabric Loom | 1.17.17 |
 | JDK | Temurin 25 (pinned via `mise.toml`) |

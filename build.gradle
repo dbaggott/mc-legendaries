@@ -7,6 +7,11 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+// Named once: this is both where releases are published and where a client
+// fetches the resource pack from at runtime.
+def githubRepository = "dbaggott/mc-legendaries"
+def resourcePackName = "legendaries-resourcepack"
+
 repositories {
 	// Loom adds Mojang + Fabric repos automatically. Add others here only
 	// when depending on mods hosted elsewhere.
@@ -47,6 +52,20 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
+// What a client renders the Legendary Pickaxe from. Published as a release
+// asset and offered to joining players by ResourcePackOffer; a client without
+// it falls back to the vanilla model and sees an ordinary netherite pickaxe.
+def resourcePack = tasks.register("resourcePack", Zip) {
+	from "src/main/resourcepack"
+	archiveBaseName = resourcePackName
+	archiveVersion = project.mod_version
+	destinationDirectory = layout.buildDirectory.dir("libs")
+	// The hash stamped into the jar has to match the file that ends up on the
+	// release, so the same source must always zip to the same bytes.
+	preserveFileTimestamps = false
+	reproducibleFileOrder = true
+}
+
 processResources {
 	def version = project.version
 	inputs.property "version", version
@@ -56,6 +75,26 @@ processResources {
 	filesMatching("fabric.mod.json") {
 		expand "version": version
 	}
+
+	// ResourcePackOffer has to name a URL and a hash for a file that does not
+	// exist until the release is cut and that it cannot ask anything for at
+	// runtime, so the build stamps both in. The URL is where the github block
+	// below uploads the zip.
+	def packFile = resourcePack.flatMap { it.archiveFile }
+	def packUrl = "https://github.com/${githubRepository}/releases/download/" +
+			"v${project.mod_version}/${resourcePackName}-${project.mod_version}.zip"
+	inputs.file packFile
+	inputs.property "packUrl", packUrl
+
+	filesMatching("legendaries-resourcepack.properties") {
+		expand "url": packUrl, "sha1": sha1(packFile.get().asFile)
+	}
+}
+
+static String sha1(File file) {
+	def digest = java.security.MessageDigest.getInstance("SHA-1")
+	file.eachByte(64 * 1024) { byte[] buffer, int length -> digest.update(buffer, 0, length) }
+	return digest.digest().encodeHex().toString()
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -155,7 +194,10 @@ publishMods {
 	}
 
 	github {
-		repository = "dbaggott/mc-legendaries"
+		repository = githubRepository
+		// The pack rides on the same release as the jar, at the URL the jar was
+		// stamped with. Publishing one without the other leaves that URL dead.
+		additionalFiles.from(resourcePack)
 		accessToken = providers.environmentVariable("GITHUB_TOKEN")
 		// Pin the release/tag to the actual commit being built. On a
 		// workflow_dispatch from a branch, GITHUB_SHA is that branch's HEAD;
