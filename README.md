@@ -7,8 +7,8 @@ A Minecraft mod (Fabric) that adds **legendary** items: unique, one-per-world
 artifacts with their own rules, each defined by a single data file, and no other
 way to obtain them.
 
-Four exist so far: the **Netherite Spear**, the **Mace**, the **Dragon Egg** and the
-**Legendary Pickaxe**.
+Six exist so far: the **Netherite Spear**, the **Mace**, the **Dragon Egg**, the
+**Legendary Pickaxe**, the **Legendary Sword** and the **Legendary Axe**.
 
 Every legendary shares the same rules — one per world, refused by every container, never set down
 as a block, and returned to a shared pedestal rather than ever being lost. What differs is how you
@@ -177,6 +177,40 @@ string and names the vanilla model as its fallback, so the texture only ever rep
 pickaxe. Decline the pack, or play without it, and you see a netherite pickaxe — nothing else
 changes, and nothing renders wrong. See [Textures](#textures).
 
+## The Legendary Sword and the Legendary Axe
+
+**Ordinary swords and axes are untouched.** Like the pickaxe and unlike the spear, each has a recipe
+of its own rather than replacing vanilla's, so every netherite sword and axe you could make before
+you can still make now.
+
+**One recipe shape, two items.** Both are built from what the game's three bosses leave behind, with
+the tool being upgraded at the centre:
+
+|   |   |   |
+|---|---|---|
+| Dragon breath | Dragon head | Dragon breath |
+| Echo shard | *Netherite sword or axe* | Echo shard |
+| Nether star | Sharpness V book | Nether star |
+
+Two nether stars means two withers for each, and the dragon head means an End city — these sit past
+everything else in the mod for cost.
+
+**The book is checked when you take the result.** A recipe can ask for an enchanted book and cannot
+ask what is written in it, so a book of the wrong enchantment assembles a result that refuses to
+come out and says why. The same condition the pickaxe's two books carry.
+
+**The Sword.** Unbreakable, **Sharpness VIII, Fire Aspect III and Looting III**, and **Speed** while
+it is in your inventory or your hand. It is deliberately the hardest-hitting thing in the mod: the
+spear carries the vanilla ceiling of Sharpness V, and this goes three past it.
+
+**The Axe.** Unbreakable, **Sharpness VIII, Silk Touch and Efficiency V**, and **Strength** while
+carried. Silk Touch on an axe is not idle — it is what takes a bee nest with the bees still in it.
+Efficiency V rather than the pickaxe's VI, so the pickaxe stays the better tool for what a pickaxe
+is for.
+
+**They keep the rules the others do** — refused by every container, never left on display, returned
+to the pedestal rather than lost, and one per world each.
+
 ## Admin
 
 ```
@@ -277,10 +311,9 @@ The pack's `when` string and the `minecraft:custom_model_data` on the recipe res
 of one match, in `src/main/resourcepack/assets/minecraft/items/netherite_pickaxe.json` and
 `src/main/resources/data/legendaries/recipe/legendary_pickaxe.json`. They are changed together.
 
-**Two textures are drawn ahead of their items.** `legendary_axe` and `legendary_sword` are in the
-pack, and nothing selects them — no legendary is a netherite axe or sword. They are here so the art
-is versioned alongside the rest rather than living in someone's downloads. Giving one an item means
-an item definition beside the pickaxe's and a `custom_model_data` marker on whatever produces it.
+The same pairing repeats for the Legendary Sword and the Legendary Axe: one item definition each,
+one marker each, one texture each. Every ordinary netherite sword, axe and pickaxe falls through to
+the vanilla model it always had.
 
 **Single-player too.** The integrated server answers the same question the dedicated one does, so
 your own world offers you the pack the same way. To apply it by hand instead, the zip is on the

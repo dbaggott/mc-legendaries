@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "DHD",
+    "ESE",
+    "NBN"
+  ],
+  "key": {
+    "D": "minecraft:dragon_breath",
+    "H": "minecraft:dragon_head",
+    "E": "minecraft:echo_shard",
+    "S": "minecraft:netherite_sword",
+    "N": "minecraft:nether_star",
+    "B": "minecraft:enchanted_book"
+  },
+  "result": {
+    "id": "minecraft:netherite_sword",
+    "components": {
+      "minecraft:custom_data": {
+        "legendaries_sword": true
+      },
+      "minecraft:custom_model_data": {
+        "strings": [
+          "legendaries:sword"
+        ]
+      },
+      "minecraft:unbreakable": {},
+      "minecraft:enchantments": {
+        "minecraft:sharpness": 8,
+        "minecraft:fire_aspect": 3,
+        "minecraft:looting": 3
+      }
+    }
+  }
+}

@@ -80,7 +80,38 @@ public enum Legendary implements Tunable {
 			new LegendarySource.FromRecipe("legendaries:legendary_pickaxe",
 					new CraftRequirement.EveryBookHas(Enchantments.EFFICIENCY, 5,
 							"Both books must be Efficiency V.")),
-			MobEffects.FIRE_RESISTANCE, 0, null);
+			MobEffects.FIRE_RESISTANCE, 0, null),
+
+	/**
+	 * Crafted from a netherite sword and what the three bosses leave behind, and it out-cuts
+	 * everything else in the mod — Sharpness VIII where the spear carries the vanilla ceiling of V.
+	 *
+	 * <p>Vanilla swords are untouched: this has a recipe of its own rather than replacing theirs, so
+	 * an ordinary netherite sword is still craftable and this is the one that is not ordinary.
+	 *
+	 * <p>The Sharpness V on the book is the part the recipe file cannot ask for, so it rides on the
+	 * source as a {@link CraftRequirement} — the same shape as the pickaxe's books.
+	 */
+	SWORD("legendaries_sword", Items.NETHERITE_SWORD, "The Legendary Sword",
+			new LegendarySource.FromRecipe("legendaries:legendary_sword",
+					new CraftRequirement.EveryBookHas(Enchantments.SHARPNESS, 5,
+							"The book must be Sharpness V.")),
+			MobEffects.SPEED, 0, null),
+
+	/**
+	 * The sword's recipe with an axe at its heart, and the same reach past the enchanting table:
+	 * Sharpness VIII on a tool, with Silk Touch and Efficiency V under it.
+	 *
+	 * <p>Silk Touch on an axe is not idle — it is what takes a bee nest with its bees still in it.
+	 *
+	 * <p>Efficiency V rather than the pickaxe's VI, so the pickaxe stays the better tool for the
+	 * thing a pickaxe is for.
+	 */
+	AXE("legendaries_axe", Items.NETHERITE_AXE, "The Legendary Axe",
+			new LegendarySource.FromRecipe("legendaries:legendary_axe",
+					new CraftRequirement.EveryBookHas(Enchantments.SHARPNESS, 5,
+							"The book must be Sharpness V.")),
+			MobEffects.STRENGTH, 0, null);
 
 	private final String marker;
 	private final Item item;
