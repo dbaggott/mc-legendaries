@@ -83,8 +83,8 @@ public enum Legendary implements Tunable {
 			MobEffects.FIRE_RESISTANCE, 0, null),
 
 	/**
-	 * Crafted from a netherite sword and what the three bosses leave behind, and it out-cuts
-	 * everything else in the mod — Sharpness VIII where the spear carries the vanilla ceiling of V.
+	 * Crafted from a netherite sword and what the far ends of the game hold — Sharpness VIII where
+	 * the spear carries the vanilla ceiling of V.
 	 *
 	 * <p>Vanilla swords are untouched: this has a recipe of its own rather than replacing theirs, so
 	 * an ordinary netherite sword is still craftable and this is the one that is not ordinary.

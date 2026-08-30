@@ -114,8 +114,7 @@ shovel for that one block.
 **Ordinary swords and axes still work.** Each has its own recipe rather than replacing vanilla's, so
 nothing you could make before is gone.
 
-**One recipe, two items** — everything the three bosses leave behind, around the tool you are
-upgrading:
+**One recipe, two items** — the far ends of the game, around the tool you are upgrading:
 
 |   |   |   |
 |---|---|---|
@@ -123,7 +122,8 @@ upgrading:
 | Echo shard | *Netherite sword or axe* | Echo shard |
 | Nether star | Sharpness V book | Nether star |
 
-Two nether stars each means two withers each. The book is checked when you take the result, so the
+Two nether stars each means two withers each, the dragon head is mined off an End city ship, and the
+echo shards come out of ancient city chests. The book is checked when you take the result, so the
 wrong enchantment gives you a result that refuses to come out and tells you why.
 
 **The Sword** is unbreakable, carries **Sharpness VIII, Fire Aspect III and Looting III**, and gives

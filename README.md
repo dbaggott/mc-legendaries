@@ -183,8 +183,8 @@ changes, and nothing renders wrong. See [Textures](#textures).
 of its own rather than replacing vanilla's, so every netherite sword and axe you could make before
 you can still make now.
 
-**One recipe shape, two items.** Both are built from what the game's three bosses leave behind, with
-the tool being upgraded at the centre:
+**One recipe shape, two items.** Both are built from the far ends of the game — the End's dragon and
+its cities, the deep dark's, and a pair of withers — with the tool being upgraded at the centre:
 
 |   |   |   |
 |---|---|---|
@@ -192,8 +192,9 @@ the tool being upgraded at the centre:
 | Echo shard | *Netherite sword or axe* | Echo shard |
 | Nether star | Sharpness V book | Nether star |
 
-Two nether stars means two withers for each, and the dragon head means an End city — these sit past
-everything else in the mod for cost.
+Two nether stars means two withers for each; the dragon head is mined off an End city ship, the
+breath is bottled from the dragon mid-fight, and the echo shards come out of ancient city chests.
+These sit past everything else in the mod for cost.
 
 **The book is checked when you take the result.** A recipe can ask for an enchanted book and cannot
 ask what is written in it, so a book of the wrong enchantment assembles a result that refuses to
