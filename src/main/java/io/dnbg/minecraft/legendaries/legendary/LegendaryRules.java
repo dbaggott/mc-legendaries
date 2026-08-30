@@ -23,6 +23,9 @@ import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ResultContainer;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DecoratedPotBlock;
@@ -140,10 +143,12 @@ public final class LegendaryRules {
 	}
 
 	/**
-	 * Whether the player is carrying this legendary, in hand or in inventory.
+	 * Whether the player has this legendary: in hand, in their inventory, or wherever the screen
+	 * they have open is holding it — see {@link #heldInScreen}, which is where most of the answer
+	 * lives and why an anvil's input slot and the menu cursor both count.
 	 *
-	 * <p>Only the player's own slots count. One nested inside a shulker box in the inventory does
-	 * not — though nothing can put it there, since the container rules refuse it.
+	 * <p>One nested inside a shulker box does not, though nothing can put it there, since the
+	 * container rules refuse it.
 	 */
 	public static boolean carrying(Player player, Legendary legendary) {
 		for (ItemStack stack : player.getInventory().getNonEquipmentItems()) {
@@ -151,7 +156,41 @@ public final class LegendaryRules {
 				return true;
 			}
 		}
-		return legendary.is(player.getOffhandItem()) || legendary.is(player.getMainHandItem());
+		if (legendary.is(player.getOffhandItem()) || legendary.is(player.getMainHandItem())) {
+			return true;
+		}
+		return heldInScreen(player, legendary);
+	}
+
+	/**
+	 * A legendary the player is holding inside an open screen, where their inventory does not show
+	 * it.
+	 *
+	 * <p>Dragging one from slot to slot parks it on the menu's cursor, belonging to no container
+	 * until it lands, and an anvil or grindstone input holds it in a container of the screen's own.
+	 * Reading either as having lost it costs more than a flicker: an effect is reapplied on the next
+	 * pass, but dropping a max-health modifier clamps current health to the new maximum, and the
+	 * hearts come back empty — so moving one around would charge a player real health, once per
+	 * pass, with no way to get it back. See {@link CarriedHearts}.
+	 *
+	 * <p>Every slot counts except a result. Storage refuses a legendary outright, so a slot holding
+	 * one is somewhere the player put it rather than somewhere it is stored, and enumerating those
+	 * screens would mean missing the next one. A {@link ResultContainer} is the exception because it
+	 * is not possession at all: it previews what a grid <em>would</em> make, for a player who has not
+	 * taken it and may be refused when they try — counting it would hand out what a legendary grants
+	 * to anyone who lays out its recipe.
+	 */
+	private static boolean heldInScreen(Player player, Legendary legendary) {
+		AbstractContainerMenu menu = player.containerMenu;
+		if (legendary.is(menu.getCarried())) {
+			return true;
+		}
+		for (Slot slot : menu.slots) {
+			if (!(slot.container instanceof ResultContainer) && legendary.is(slot.getItem())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

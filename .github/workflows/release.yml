@@ -69,6 +69,12 @@ jobs:
     needs: gate
     if: needs.gate.outputs.proceed == 'true'
     runs-on: ubuntu-latest
+    # Stamps the resource pack's URL and hash into the jar. Only a build that
+    # publishes the pack may claim it; see processResources in build.gradle.
+    # Job-level so `build` and `publishMods` agree — the jar the second step
+    # uploads is the one the first step packed.
+    env:
+      LEGENDARIES_RELEASE: '1'
     steps:
       - uses: actions/checkout@v7
         with:
