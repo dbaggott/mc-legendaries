@@ -38,13 +38,14 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class LegendaryRules {
 	/**
-	 * How often what a legendary grants by being carried is put back where it belongs.
+	 * How often the sweeps that read who is carrying what run.
 	 *
-	 * <p>Shorter than an effect's own duration, so the effect never visibly flickers — and short
-	 * enough that neither an effect nor a heart outlives a legendary leaving the inventory by more
-	 * than one pass.
+	 * <p>Set by the bonuses, which are the demanding half: shorter than an effect's own duration, so
+	 * the effect never visibly flickers, and short enough that neither an effect nor a heart outlives
+	 * a legendary leaving the inventory by more than one pass. An arrival has nothing to say about
+	 * the rate and rides on it.
 	 */
-	private static final int BONUS_INTERVAL_TICKS = 20;
+	private static final int CARRY_SWEEP_TICKS = 20;
 	private static final int EFFECT_DURATION_TICKS = 40;
 
 	/** Reset per session; the pedestal is raised once the site's chunk is genuinely loaded. */
@@ -138,7 +139,7 @@ public final class LegendaryRules {
 	 */
 	private static void announceArrivals() {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (server.getTickCount() % BONUS_INTERVAL_TICKS != 0) {
+			if (server.getTickCount() % CARRY_SWEEP_TICKS != 0) {
 				return;
 			}
 			LegendaryState state = LegendaryState.get(server);
@@ -158,7 +159,7 @@ public final class LegendaryRules {
 	/** Everything a legendary grants merely by being carried, put back on one cadence. */
 	private static void grantCarriedBonuses() {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			if (server.getTickCount() % BONUS_INTERVAL_TICKS != 0) {
+			if (server.getTickCount() % CARRY_SWEEP_TICKS != 0) {
 				return;
 			}
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
