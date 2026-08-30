@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.MinecraftServer.ServerResourcePackInfo;
@@ -39,6 +38,11 @@ public final class ResourcePackOffer {
 	 * server has to name a URL and a hash for a file that does not exist yet at runtime and cannot
 	 * be asked for either. Absent only if the jar was packed wrong, which is why failing to read it
 	 * offers nothing rather than guessing.
+	 *
+	 * <p>Blank rather than absent in a jar that was not built to be released — a local or CI build,
+	 * or a dev run. The URL would name an asset of a release only that build produces, so pointing
+	 * clients at it means a failed download for every one of them; offering nothing is what a jar
+	 * with no published pack behind it should do.
 	 */
 	private static final String PROPERTIES = "/legendaries-resourcepack.properties";
 
@@ -72,12 +76,6 @@ public final class ResourcePackOffer {
 	}
 
 	private static Optional<ServerResourcePackInfo> load() {
-		// A dev run's version has never been released, so the URL the build stamped in names a
-		// GitHub release that does not exist and every client would fail the download. Testing the
-		// pack in dev means applying the built zip locally.
-		if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-			return Optional.empty();
-		}
 		Properties properties = new Properties();
 		try (InputStream in = ResourcePackOffer.class.getResourceAsStream(PROPERTIES)) {
 			if (in == null) {
@@ -93,6 +91,13 @@ public final class ResourcePackOffer {
 		String sha1 = properties.getProperty("sha1");
 		if (url == null || sha1 == null) {
 			Legendaries.LOGGER.error("{} names no url and sha1; offering no resource pack", PROPERTIES);
+			return Optional.empty();
+		}
+		// Said out loud rather than passed over, because the alternative to a client seeing a failed
+		// download is a release that quietly never offers the pack it published.
+		if (url.isBlank() || sha1.isBlank()) {
+			Legendaries.LOGGER.info("Not a release build, so no resource pack is offered; "
+					+ "the Legendary Pickaxe renders as an ordinary netherite pickaxe");
 			return Optional.empty();
 		}
 		return Optional.of(new ServerResourcePackInfo(ID, url, sha1, false, PROMPT));

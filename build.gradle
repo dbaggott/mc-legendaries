@@ -80,14 +80,23 @@ processResources {
 	// exist until the release is cut and that it cannot ask anything for at
 	// runtime, so the build stamps both in. The URL is where the github block
 	// below uploads the zip.
+	//
+	// Only a release build stamps them. The URL names an asset of a release that
+	// only this build produces, so a jar built any other way would point every
+	// joining client at a 404; stamping nothing makes it offer nothing instead.
+	// release.yml sets the variable for the whole job. The zip is still built,
+	// so it can be applied by hand from a local build.
+	def releaseBuild = providers.environmentVariable("LEGENDARIES_RELEASE").isPresent()
 	def packFile = resourcePack.flatMap { it.archiveFile }
-	def packUrl = "https://github.com/${githubRepository}/releases/download/" +
-			"v${project.mod_version}/${resourcePackName}-${project.mod_version}.zip"
+	def packUrl = releaseBuild
+			? "https://github.com/${githubRepository}/releases/download/" +
+					"v${project.mod_version}/${resourcePackName}-${project.mod_version}.zip"
+			: ""
 	inputs.file packFile
 	inputs.property "packUrl", packUrl
 
 	filesMatching("legendaries-resourcepack.properties") {
-		expand "url": packUrl, "sha1": sha1(packFile.get().asFile)
+		expand "url": packUrl, "sha1": releaseBuild ? sha1(packFile.get().asFile) : ""
 	}
 }
 
