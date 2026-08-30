@@ -258,10 +258,10 @@ silent. A world hears about each of the six exactly once, ever.
 crafted, so it is obtained; and a legendary an operator hands out with `item give` was not crafted
 either, so the line does not claim it was.
 
-It is noticed on the same once-a-second pass that puts back what a legendary grants, rather than
-hooked to the craft itself: taking one out of a crafting result and picking the egg up off the ground
-are two different acts, and what is being announced is neither of them — it is the legendary being in
-play. The line lands within a second rather than on the tick.
+**A craft announces itself**, at the moment the result leaves the slot, because that is the one place
+that knows which player made it. Everything else — the egg dug out of its block, a copy an operator
+hands out — is noticed on the once-a-second pass that already asks who is carrying what, and credits
+whoever has it. That line lands within a second rather than on the tick.
 
 **A legendary a world already had is announced the first time somebody picks it up** after this
 version, since nothing recorded the arrival at the time.
@@ -289,7 +289,9 @@ version, since nothing recorded the arrival at the time.
 `<subject>` is `molten_blast` or `dragon_egg`, tab-completed; so is `<setting>`, and it offers only
 the knobs that subject actually has. A legendary answers to the name the item itself carries —
 `legendary_pickaxe`, `legendary_spear`, and `dragon_egg` for the one that keeps vanilla's name. So
-does `item give`.
+does `item give`. These changed in 0.9.0: what was `netherite_spear`, `mace`, `pickaxe`, `sword` and
+`axe` is now `legendary_` and each of those, and only `dragon_egg` is what it was. A command block
+still running an old name fails with "unknown legendary".
 
 A knob names whatever it belongs to, which is not always the item in your hand. The blast's four
 belong to the **ability** rather than to the mace carrying it, because two carriers of one ability

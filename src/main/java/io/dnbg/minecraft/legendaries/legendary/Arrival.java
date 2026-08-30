@@ -2,7 +2,7 @@ package io.dnbg.minecraft.legendaries.legendary;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Tells the world, once, that a legendary is in somebody's hands.
@@ -15,6 +15,10 @@ import net.minecraft.server.level.ServerPlayer;
  * legendary is defined. Those differ in the case that matters: the Dragon Egg is never crafted, so
  * it is obtained; and a legendary an operator hands out with {@code item give} was not crafted
  * either, so it does not claim to have been.
+ *
+ * <p>Called from the two places that know who to credit — the craft, where the player taking the
+ * result is the one who made it, and {@link LegendaryRules}' sweep, which is what sees a legendary
+ * that no craft produced.
  */
 public final class Arrival {
 	private Arrival() {
@@ -23,10 +27,10 @@ public final class Arrival {
 	/**
 	 * Announces this legendary if the world has not heard about it yet.
 	 *
-	 * <p>Marking and announcing are one step, so two players holding it on the same tick cannot both
-	 * be the first.
+	 * <p>Marking and announcing are one step, so two callers reaching this on the same tick cannot
+	 * both be the first.
 	 */
-	public static void announce(MinecraftServer server, Legendary legendary, ServerPlayer holder) {
+	public static void announce(MinecraftServer server, Legendary legendary, Player holder) {
 		LegendaryState state = LegendaryState.get(server);
 		if (!state.markAnnounced(legendary)) {
 			return;

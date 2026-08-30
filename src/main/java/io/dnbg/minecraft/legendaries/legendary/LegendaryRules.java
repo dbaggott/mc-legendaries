@@ -124,15 +124,17 @@ public final class LegendaryRules {
 	}
 
 	/**
-	 * Tells the world the first time a legendary is in somebody's hands.
+	 * Tells the world about a legendary that arrived without a craft.
 	 *
-	 * <p>Read off the same "is this player carrying it" question the bonuses run on, rather than
-	 * hooked to the act that produced it. There are two such acts — taking one out of a crafting
-	 * result, and picking the Dragon Egg up off the ground — and the announcement is about neither:
-	 * it is about the legendary being in play, which is one fact with one answer.
+	 * <p>The Dragon Egg is the one that always does — it is dug out of a block rather than made — and
+	 * an operator's {@code item give} is the other way one reaches a player with nothing to announce
+	 * it. A craft announces itself, from the one place that knows which player made it; see {@link
+	 * io.dnbg.minecraft.legendaries.mixin.ResultSlotMixin}.
 	 *
-	 * <p>The cost is that the line arrives on the next pass rather than on the tick itself, which is
-	 * under a second and is not a rule anybody can act on.
+	 * <p>Read off the same "is this player carrying it" question the bonuses run on, so every route
+	 * to holding one is covered without naming any of them. The cost is that the line arrives on the
+	 * next pass rather than on the tick, which is under a second and is not a rule anybody can act
+	 * on.
 	 */
 	private static void announceArrivals() {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
