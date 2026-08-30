@@ -21,8 +21,13 @@ import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ResultContainer;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DecoratedPotBlock;
@@ -151,7 +156,54 @@ public final class LegendaryRules {
 				return true;
 			}
 		}
-		return legendary.is(player.getOffhandItem()) || legendary.is(player.getMainHandItem());
+		if (legendary.is(player.getOffhandItem()) || legendary.is(player.getMainHandItem())) {
+			return true;
+		}
+		return heldInScreen(player, legendary);
+	}
+
+	/**
+	 * A legendary the player is holding inside an open screen, where their inventory does not show
+	 * it.
+	 *
+	 * <p>Dragging one from slot to slot parks it on the menu's cursor, belonging to no container
+	 * until it lands. Reading that as having lost it costs more than a flicker: an effect is
+	 * reapplied on the next pass, but dropping a max-health modifier clamps current health to the
+	 * new maximum, and the hearts come back empty — so rearranging an inventory would charge a
+	 * player real health for it, once per pass, with no way to get it back. See {@link
+	 * CarriedHearts}.
+	 */
+	private static boolean heldInScreen(Player player, Legendary legendary) {
+		AbstractContainerMenu menu = player.containerMenu;
+		if (legendary.is(menu.getCarried())) {
+			return true;
+		}
+		for (Slot slot : menu.slots) {
+			if (ownWorkingSpace(slot.container) && legendary.is(slot.getItem())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Whether a container is the player's own working space rather than somewhere they put things
+	 * away.
+	 *
+	 * <p>Two rules turn on this and have to agree: a legendary is allowed into these and refused
+	 * everywhere else, and one sitting in them still counts as carried. Deciding it twice would let
+	 * a legendary occupy a slot it is permitted in but that quietly stopped counting — see {@link
+	 * io.dnbg.minecraft.legendaries.mixin.SlotMixin} and {@link #heldInScreen}.
+	 *
+	 * <p>A crafting grid and its result are working space because the legendary has to be able to
+	 * come out of a result slot, and quick-move has to be able to put it back somewhere sane.
+	 * {@link TransientCraftingContainer} rather than the {@code CraftingContainer} interface: a
+	 * crafter block implements that too, and a crafter is redstone-facing storage — exactly what the
+	 * container rules exist to keep legendaries out of.
+	 */
+	public static boolean ownWorkingSpace(Container container) {
+		return container instanceof Inventory || container instanceof TransientCraftingContainer
+				|| container instanceof ResultContainer;
 	}
 
 	/**

@@ -3,15 +3,13 @@ package io.dnbg.minecraft.legendaries.mixin;
 import io.dnbg.minecraft.legendaries.legendary.Actionbar;
 import io.dnbg.minecraft.legendaries.legendary.CraftRequirement;
 import io.dnbg.minecraft.legendaries.legendary.Legendary;
+import io.dnbg.minecraft.legendaries.legendary.LegendaryRules;
 import io.dnbg.minecraft.legendaries.legendary.LegendaryState;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ResultSlot;
-import net.minecraft.world.inventory.TransientCraftingContainer;
-import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -46,15 +44,7 @@ public abstract class SlotMixin {
 		if (!Legendary.isAny(stack)) {
 			return;
 		}
-		Object container = ((Slot) (Object) this).container;
-		// A crafting grid and its result are the player's own working space, not storage — the
-		// legendary has to be able to come OUT of a result slot, and quick-move has to be able to put
-		// it back somewhere sane.
-		// TransientCraftingContainer, not the CraftingContainer interface: a crafter block also
-		// implements it, and a crafter is redstone-facing storage — exactly what this rule and the
-		// hopper mixin exist to keep legendaries out of.
-		if (container instanceof Inventory || container instanceof TransientCraftingContainer
-				|| container instanceof ResultContainer) {
+		if (LegendaryRules.ownWorkingSpace(((Slot) (Object) this).container)) {
 			return;
 		}
 		cir.setReturnValue(false);
