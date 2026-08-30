@@ -15,9 +15,12 @@ jobs:
     # present unchanged in all four lines: the same seven spear recipes, the same
     # data/minecraft/enchantment/lunge.json, the same mace recipe over heavy_core
     # and breeze_rod, the same dragon egg block loot table, the deepslate ores and
-    # sculk_shrieker the pickaxe is crafted from, and the minecraft:tool component
-    # shape with an empty #incorrect_for_netherite_tool. Widening the range means
-    # re-checking all of that, not only the spears.
+    # sculk_shrieker the pickaxe is crafted from, the dragon_breath, dragon_head,
+    # echo_shard, nether_star and enchanted_book the sword and axe are crafted
+    # from, the netherite sword, axe and pickaxe item definitions the resource
+    # pack overrides, and the minecraft:tool component shape with an empty
+    # #incorrect_for_netherite_tool. Widening the range means re-checking all of
+    # that, not only the spears.
     #
     # A mixin target is a string, so a rename passes every row here and fails at
     # load instead. The targets are checked per line by hand rather than by this

@@ -137,8 +137,8 @@ swing, buttons still press.
 ## The Legendary Pickaxe
 
 **Ordinary pickaxes are untouched.** Every vanilla pickaxe recipe still works and every pickaxe they
-make is still a pickaxe — this one has a recipe of its own rather than replacing theirs. It is the
-only legendary that shares its item with something you can still make normally.
+make is still a pickaxe — this one has a recipe of its own rather than replacing theirs, the way the
+Legendary Sword and the Legendary Axe do.
 
 **Getting it.** One crafting recipe, around a netherite pickaxe:
 
@@ -170,8 +170,8 @@ up as gravel — this is not the tool to dig flint with.
 and returned to the pedestal rather than lost. It is crafted, so it is one per world — the recipe
 still previews after that, and refuses.
 
-**How it looks.** The netherite pickaxe with a gem of amber set at the elbow, so the one pickaxe
-that shares its item with an ordinary one does not share its appearance. The mod offers a small resource pack when you join and
+**How it looks.** The netherite pickaxe with a gem of amber set at the elbow, so a legendary that
+shares its item with an ordinary tool does not share its appearance. The mod offers a small resource pack when you join and
 the item carries a `minecraft:custom_model_data` string; the pack's item definition selects on that
 string and names the vanilla model as its fallback, so the texture only ever replaces *this*
 pickaxe. Decline the pack, or play without it, and you see a netherite pickaxe — nothing else
@@ -200,8 +200,10 @@ ask what is written in it, so a book of the wrong enchantment assembles a result
 come out and says why. The same condition the pickaxe's two books carry.
 
 **The Sword.** Unbreakable, **Sharpness VIII, Fire Aspect III and Looting III**, and **Speed** while
-it is in your inventory or your hand. It is deliberately the hardest-hitting thing in the mod: the
-spear carries the vanilla ceiling of Sharpness V, and this goes three past it.
+it is in your inventory or your hand. Sharpness VIII is three levels past the vanilla ceiling the
+spear carries, which makes this the fastest-killing thing in the mod — but not the biggest single
+hit. A netherite axe starts two damage above a sword and both take the same Sharpness bonus, so the
+Axe lands the harder blow and the Sword swings enough faster to more than make it up.
 
 **The Axe.** Unbreakable, **Sharpness VIII, Silk Touch and Efficiency V**, and **Strength** while
 carried. Silk Touch on an axe is not idle — it is what takes a bee nest with the bees still in it.
@@ -283,14 +285,14 @@ server running it.
 
 ## Textures
 
-The Legendary Pickaxe has a texture of its own. It ships as a resource pack rather than as assets
-inside the jar, because the jar's assets would only reach players who installed the mod — and no
-other player has to.
+The Legendary Pickaxe, Sword and Axe each have a texture of their own. They ship as a resource pack
+rather than as assets inside the jar, because the jar's assets would only reach players who
+installed the mod — and no other player has to.
 
-The texture is the vanilla netherite pickaxe with a gem set into it, and it lives under this mod's
-own namespace rather than overwriting `minecraft:item/netherite_pickaxe`. Overwriting that file
-would retexture *every* netherite pickaxe in the game, which is the one thing this legendary must
-not do.
+Each texture is the vanilla tool with a gem set into it, and they live under this mod's own
+namespace rather than overwriting `minecraft:item/netherite_pickaxe` and its siblings. Overwriting
+those files would retexture *every* netherite pickaxe, sword and axe in the game, which is the one
+thing these legendaries must not do.
 
 **How it reaches a player.** The mod answers vanilla's own "does this server serve a resource pack?"
 question with the pack published alongside the jar, and the server offers it during the configuration

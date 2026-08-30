@@ -55,8 +55,8 @@ public final class ResourcePackOffer {
 			UUID.nameUUIDFromBytes("legendaries:resourcepack".getBytes(StandardCharsets.UTF_8));
 
 	private static final Component PROMPT = Component.literal(
-			"Legendaries gives the Legendary Pickaxe a look of its own. "
-					+ "Decline and it renders as an ordinary netherite pickaxe.");
+			"Legendaries gives its legendary items a look of their own. "
+					+ "Decline and they render as the ordinary tools they are made from.");
 
 	private static final Optional<ServerResourcePackInfo> OFFER = load();
 
@@ -97,7 +97,7 @@ public final class ResourcePackOffer {
 		// download is a release that quietly never offers the pack it published.
 		if (url.isBlank() || sha1.isBlank()) {
 			Legendaries.LOGGER.info("Not a release build, so no resource pack is offered; "
-					+ "the Legendary Pickaxe renders as an ordinary netherite pickaxe");
+					+ "legendaries render as the ordinary tools they are made from");
 			return Optional.empty();
 		}
 		return Optional.of(new ServerResourcePackInfo(ID, url, sha1, false, PROMPT));

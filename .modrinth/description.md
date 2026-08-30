@@ -87,13 +87,13 @@ How many hearts is a setting.
 
 ## The Legendary Pickaxe
 
-**Ordinary pickaxes are untouched** — this has a recipe of its own rather than replacing theirs, so
-it is the one legendary sharing its item with something you can still make normally.
+**Ordinary pickaxes are untouched** — this has a recipe of its own rather than replacing theirs, the
+way the Legendary Sword and Legendary Axe do.
 
-**It looks the part.** A gem of molten amber set into the netherite, so the one legendary that
-shares its item with an ordinary tool does not share its appearance. That arrives as a small
-resource pack the server offers you when you join — optional, and declining it costs nothing but
-the look: the pack retextures only this pickaxe, and every ordinary one is untouched either way.
+**It looks the part.** A gem of molten amber set into the netherite, so a legendary that shares its
+item with an ordinary tool does not share its appearance. That arrives as a small resource pack the
+server offers you when you join — optional, and declining it costs nothing but the look: the pack
+retextures only the legendaries, and every ordinary pickaxe, sword and axe is untouched either way.
 
 |   |   |   |
 |---|---|---|
@@ -127,7 +127,8 @@ Two nether stars each means two withers each. The book is checked when you take 
 wrong enchantment gives you a result that refuses to come out and tells you why.
 
 **The Sword** is unbreakable, carries **Sharpness VIII, Fire Aspect III and Looting III**, and gives
-**Speed** while you hold or carry it. It is the hardest-hitting thing in the mod by some way.
+**Speed** while you hold or carry it. Sharpness VIII kills faster than anything else here — though
+the Axe, starting two damage higher, lands the bigger single hit.
 
 **The Axe** is unbreakable, carries **Sharpness VIII, Silk Touch and Efficiency V**, and gives
 **Strength**. Silk Touch on an axe takes a bee nest with the bees still inside.
