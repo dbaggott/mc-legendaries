@@ -140,9 +140,9 @@ publishing {
 }
 
 // Publishes the remapped mod jar, with the resource pack beside it, as a GitHub
-// Release. release.yml runs this; by hand it is:
-//   GITHUB_TOKEN=$(gh auth token) ./gradlew publishMods
-
+// Release. Only release.yml runs this: its gate, its attestation and its
+// LEGENDARIES_RELEASE stamping are what a release depends on.
+//
 // Per-version changelog file lives at changelogs/${mod_version}.md and the
 // publish reads it lazily. See changelogs/README.md for the convention. A
 // fail-fast guard below errors at publish time if the file doesn't exist for
