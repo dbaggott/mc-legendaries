@@ -139,16 +139,15 @@ publishing {
 	}
 }
 
-// Publishes the remapped mod jar to Modrinth and as a GitHub Release.
-// Trigger with:
-//   MODRINTH_API_KEY=… GITHUB_TOKEN=$(gh auth token) ./gradlew publishMods
-// Or scope to one platform: publishModrinth / publishGithub.
-
-// Per-version changelog file lives at .modrinth/changelogs/${mod_version}.md
-// and the publish reads it lazily. See .modrinth/changelogs/README.md for
-// the convention. A fail-fast guard below errors at publish time if the
-// file doesn't exist for the current version.
-def changelogPath = ".modrinth/changelogs/${project.mod_version}.md"
+// Publishes the remapped mod jar, with the resource pack beside it, as a GitHub
+// Release. Only release.yml runs this: its gate, its attestation and its
+// LEGENDARIES_RELEASE stamping are what a release depends on.
+//
+// Per-version changelog file lives at changelogs/${mod_version}.md and the
+// publish reads it lazily. See changelogs/README.md for the convention. A
+// fail-fast guard below errors at publish time if the file doesn't exist for
+// the current version, and ci.yml checks the same on every PR.
+def changelogPath = "changelogs/${project.mod_version}.md"
 def changelogFile = layout.projectDirectory.file(changelogPath)
 
 publishMods {
@@ -169,38 +168,12 @@ publishMods {
 		}
 		changelogFile.asFile.text
 	}
-	// BETA while the version is 0.x. Every rule this mod adds is a refusal on a
-	// player action, and the ones that matter most have been reasoned about far
-	// more than they have been played. Switch to STABLE at 1.0.0, once that is
-	// the other way round.
-	type = BETA
+	// STABLE, not BETA, although the version is 0.x. GitHub Releases is the only
+	// place the jar is published, and its /releases/latest link skips anything
+	// marked a pre-release, which every non-STABLE type is. The 0.x version is
+	// what still says the mod is early.
+	type = STABLE
 	modLoaders.add("fabric")
-
-	modrinth {
-		projectId = providers.gradleProperty('modrinth_project_id').getOrElse('PLACEHOLDER_SET_ME')
-		accessToken = providers.environmentVariable("MODRINTH_API_KEY")
-		// Stable MC releases only — deliberately narrower than what the jar can
-		// load on. fabric.mod.json admits the whole 26.3 line (snapshots
-		// included), but every row here is a support claim regardless of release
-		// channel, and a snapshot claim expires the week Mojang ships the next
-		// one. Add "26.3" here when 26.3 leaves snapshot; the already-published
-		// jar runs on it unchanged, so that is a metadata edit, not a release.
-		//
-		// 26.1.1 is claimed without a CI row of its own: it sits inside the
-		// range the floor (26.1) and 26.1.2 rows bracket, and every class this
-		// mod touches is byte-identical across both.
-		minecraftVersions.add("26.1")
-		minecraftVersions.add("26.1.1")
-		minecraftVersions.add("26.1.2")
-		minecraftVersions.add("26.2")
-		// Required wherever the world runs — a dedicated server, or your own
-		// game in single-player. Optional on a client joining somebody else's
-		// server, where a vanilla client sees everything this mod does.
-		environment = SERVER_ONLY_CLIENT_OPTIONAL
-		requires {
-			slug = "fabric-api"
-		}
-	}
 
 	github {
 		repository = githubRepository
@@ -208,9 +181,9 @@ publishMods {
 		// stamped with. Publishing one without the other leaves that URL dead.
 		additionalFiles.from(resourcePack)
 		accessToken = providers.environmentVariable("GITHUB_TOKEN")
-		// Pin the release/tag to the actual commit being built. On a
-		// workflow_dispatch from a branch, GITHUB_SHA is that branch's HEAD;
-		// hardcoding "main" would cut the release against main instead.
+		// Pin the release/tag to the actual commit being built. GITHUB_SHA is the
+		// commit release.yml checked out, where "main" would name whatever main
+		// points at when the tag is created.
 		commitish = providers.environmentVariable("GITHUB_SHA").orElse("main")
 		tagName = "v${project.mod_version}"
 	}

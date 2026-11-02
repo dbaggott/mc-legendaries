@@ -63,6 +63,21 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      # Merging a mod_version bump releases it, and the publish needs that
+      # version's notes. Catch a missing file here, on the PR, rather than as
+      # a failed release after the merge. One row is enough: the file does
+      # not depend on the target.
+      - name: Check this version has a changelog
+        if: matrix.name == 'mc26.2'
+        run: |
+          set -euo pipefail
+          VERSION=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          if [ ! -f "changelogs/$VERSION.md" ]; then
+            echo "::error file=gradle.properties::mod_version is $VERSION but changelogs/$VERSION.md does not exist. Write the release notes there."
+            exit 1
+          fi
+          echo "changelogs/$VERSION.md exists."
+
       - run: |
           ./gradlew build --stacktrace \
             -Pminecraft_version=${{ matrix.mc }} \
