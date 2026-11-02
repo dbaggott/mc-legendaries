@@ -1,14 +1,19 @@
 name: release
 
-# Two ways to publish:
+# Publishes v<mod_version> as a GitHub Release, carrying the jar and the
+# resource pack, unless that release already exists.
 #
-#   1. Auto: bump mod_version in gradle.properties on main → this fires
-#      with the gate enforcing "version actually changed + matching tag
-#      doesn't already exist", then builds and publishes.
+# The gate has one rule for both triggers: proceed only from main, and only
+# when no published release is named v<mod_version>. So:
 #
-#   2. Manual: Actions tab → "release" → "Run workflow" → pick the ref
-#      from the dropdown. Gate is bypassed for dispatch so this also
-#      serves as a retry path if publish failed previously.
+#   - Merging a version bump to main releases it. So does merging the
+#     missing changelog for a version whose publish failed without one.
+#   - Actions tab → "release" → "Run workflow" on main retries a publish
+#     that failed: its release does not exist yet. On a version that is
+#     already out, it stops at the gate and says so.
+#   - A run from any other branch stops at the gate. A release here is
+#     /releases/latest for every player, so it must be a merge on main
+#     that passed ci-required.
 #
 # Why one workflow not two: an earlier attempt split this into
 # auto-tag.yml (creates the tag) + release.yml (publishes on tag push)
@@ -18,63 +23,76 @@ name: release
 on:
   push:
     branches: [main]
-    paths: ['gradle.properties']
+    paths: ['gradle.properties', 'changelogs/**']
   workflow_dispatch:
 
-permissions:
-  contents: write   # for the github destination in publishMods
+# Overlapping runs (a dispatch and a merge, or two quick merges) queue
+# rather than race, and the gate turns the second into a no-op.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
 
 jobs:
   gate:
     runs-on: ubuntu-latest
+    # Read-only, so the release lookup cannot see drafts: a draft left by a
+    # failed publish counts as not published, which is what lets it retry.
+    permissions:
+      contents: read
     outputs:
       proceed: ${{ steps.check.outputs.proceed }}
       version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2     # HEAD~1 needed for the version diff
-          fetch-tags: true   # for the existing-tag check
 
       - id: check
         name: Decide whether to publish
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           CUR=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
           echo "current mod_version: $CUR"
           echo "version=$CUR" >> "$GITHUB_OUTPUT"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "manual dispatch — skipping gate (publish for current mod_version)."
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "running on $GITHUB_REF, not main — releases are cut from main only."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          PREV=$(git show HEAD~1:gradle.properties | grep '^mod_version=' | cut -d= -f2 || echo "")
-          echo "previous mod_version: $PREV"
-          if [ "$PREV" = "$CUR" ]; then
-            echo "mod_version unchanged — non-version edit to gradle.properties; nothing to publish."
+          # Fail closed: only a confirmed not-found proceeds. Any other
+          # failure (auth, rate limit, network) fails the job rather than
+          # reading as "unreleased".
+          if ERR=$(gh release view "v$CUR" --repo "$GITHUB_REPOSITORY" --json tagName 2>&1 >/dev/null); then
+            echo "release v$CUR already exists — nothing to publish."
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git rev-parse "v$CUR" >/dev/null 2>&1; then
-            echo "tag v$CUR already exists — refusing to clobber. Delete the tag manually if you mean to re-release."
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ "$ERR" != "release not found" ]; then
+            echo "::error::could not tell whether v$CUR is released: $ERR"
+            exit 1
           fi
-          echo "version $CUR is new — proceeding to publish."
+          echo "no release v$CUR yet — proceeding to publish."
           echo "proceed=true" >> "$GITHUB_OUTPUT"
 
   publish:
     needs: gate
     if: needs.gate.outputs.proceed == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # the release, its tag, and clearing old drafts
+      id-token: write      # signing the provenance attestation
+      attestations: write  # storing it
     # Stamps the resource pack's URL and hash into the jar. Only a build that
     # publishes the pack may claim it; see processResources in build.gradle.
     # Job-level so `build` and `publishMods` agree — the jar the second step
     # uploads is the one the first step packed.
     env:
       LEGENDARIES_RELEASE: '1'
+      VERSION: ${{ needs.gate.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -90,12 +108,33 @@ jobs:
       - name: Build
         run: ./gradlew build
 
+      # Ties each release asset to this repository and this run. Verify a
+      # download with: gh attestation verify <file> --repo dbaggott/mc-legendaries
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            build/libs/legendaries-${{ env.VERSION }}.jar
+            build/libs/legendaries-resourcepack-${{ env.VERSION }}.zip
+
+      # The publish plugin always creates a fresh draft, uploads to it, then
+      # publishes it; it never reuses one. A failed run leaves its draft
+      # behind and each retry would add another, so clear them first.
+      - name: Delete leftover drafts of this version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+              --jq ".[] | select(.draft and .tag_name == \"v$VERSION\") | .id" |
+            while read -r id; do
+              echo "deleting draft release $id (v$VERSION)"
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+            done
+
       # The mod-publish-plugin's github destination creates the
       # v<mod_version> tag at commitish (= GITHUB_SHA, set in
-      # build.gradle) and attaches the jar. modrinth destination
-      # uploads the same jar as a new version row.
-      - name: Publish to Modrinth and GitHub Releases
+      # build.gradle) and attaches the jar and the resource pack.
+      - name: Publish to GitHub Releases
         run: ./gradlew publishMods
         env:
-          MODRINTH_API_KEY: ${{ secrets.MODRINTH_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

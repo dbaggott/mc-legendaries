@@ -328,7 +328,8 @@ whatever is standing there.
 
 ## Installing
 
-Drop the jar in a `mods` folder alongside [Fabric API](https://modrinth.com/mod/fabric-api).
+Download the jar from the [latest release](https://github.com/dbaggott/mc-legendaries/releases/latest)
+and drop it in a `mods` folder alongside [Fabric API](https://modrinth.com/mod/fabric-api).
 Which folder depends on where the world lives, because every rule this mod adds
 is decided by whichever side is running the world:
 
@@ -339,6 +340,15 @@ is decided by whichever side is running the world:
 Other players need nothing. The mod registers no custom item, block or data
 component, so a vanilla client sees only vanilla things and can connect to a
 server running it.
+
+Supported on the stable Minecraft releases 26.1, 26.1.1, 26.1.2 and 26.2. The jar also loads on
+the 26.3 snapshots (see [Target toolchain](#target-toolchain)), but a snapshot is not claimed as
+supported, since each one is replaced the week Mojang ships the next.
+
+To check that a download is the one this repository's release workflow built, run
+`gh attestation verify <file> --repo dbaggott/mc-legendaries` on the jar or the resource-pack zip.
+
+**Support:** if you enjoy the mod, you can [buy me a coffee on Ko-fi](https://ko-fi.com/dnbg000).
 
 ## Textures
 
@@ -457,23 +467,20 @@ world lock.
 
 ## Releasing
 
-Published to [Modrinth](https://modrinth.com/mod/re-legendaries) and GitHub Releases from one
-workflow. To cut a release:
+Published as GitHub Releases, the only place the jar is distributed. To cut a release:
 
-1. Write `.modrinth/changelogs/<new-version>.md`.
+1. Write `changelogs/<new-version>.md`.
 2. Bump `mod_version` in `gradle.properties` and merge to `main`.
 
-`.github/workflows/release.yml` fires on that bump, refuses if the version did not actually change
-or if the tag already exists, then builds and publishes. Forgetting step 1 fails the publish with a
-message naming the missing file, so every release has written notes by construction. The Actions tab
-also has a manual `Run workflow` for retries, which skips the gate.
+`.github/workflows/release.yml` fires on that merge. Its gate proceeds only on `main`, and only
+when no published release exists for `v<mod_version>`; then it builds, attests the jar and resource
+pack, and publishes them as a full release, which becomes
+[`/releases/latest`](https://github.com/dbaggott/mc-legendaries/releases/latest). CI fails a PR
+whose `mod_version` has no changelog file, so every release has written notes by construction.
 
-`.modrinth/` is the source of truth for the project page — description, metadata, icon and gallery.
-Changing anything under it on `main` syncs Modrinth to match, so the web UI is a read-through of the
-repo rather than somewhere state is edited. The icon and gallery steps skip when the files are
-absent, which they currently are.
-
-Both workflows need a `MODRINTH_API_KEY` repository secret.
+The Actions tab also has a manual `Run workflow`. On `main` it retries a publish that failed,
+since that version has no release yet; on a version already released, or from any other branch, it
+stops at the gate.
 
 ## License
 
